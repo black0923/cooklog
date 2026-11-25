@@ -15,6 +15,7 @@
 - **今天这顿**：详情页一键加入采购清单，首页把各菜的配料**去重合并**成一张采购单，买完一键清空
 - **一起点菜**：局域网点菜。App 在本机起一个只读小服务，显示 4 位访问码和二维码；同一 WiFi（或你的热点）下好友扫码就能看到你的菜、看图、勾选提交，结果自动回到你手机，可一键加进采购清单
 - **备份**：导出 JSON 到系统「下载」目录，导入时从那里选
+- **AI 识别配料**：做法步骤写完后离开输入框，自动识别食材并回填到下方的配料框；用智谱 `glm-4-flash`（免费），只补不删，手填的内容会保留
 - **热更新**：网页层改动可通过更新包下发，不用重装
 
 ## 技术栈
@@ -49,6 +50,7 @@ android/
     MainActivity.java   注册两个原生插件
     LanSharePlugin.java 局域网服务（菜品/图片 HTTP 接口、收好友提交）
     BackupPlugin.java   备份写入系统下载目录、读取用户选的文件
+    AiPlugin.java       调智谱接口从步骤里提取配料（原生发请求，绕开跨域）
   app/src/main/res/     图标与启动图
 
 www/                    构建产物（webDir），由脚本生成，不进仓库
@@ -121,6 +123,7 @@ node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.
 10. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
 11. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
 12. **Android 9+ 默认禁止明文 HTTP。** 局域网共选的自检走 `HttpURLConnection` 访问 `http://127.0.0.1`，没有 `network_security_config.xml` 就会报 `Cleartext HTTP traffic to 127.0.0.1 not permitted`。现在 `res/xml/network_security_config.xml` 只对 `127.0.0.1` / `localhost` 放开，其余仍禁止。
+13. **AI Key 只进 APK，不进仓库。** 本机在项目根目录放一个 `ai-key.local`（内容就是智谱 API Key），`build-apk.js` 会把它写进 `AiKey.java` 再打包；`ai-key.local` 和 `AiKey.java` 都在 `.gitignore` 里。智谱接口没有 CORS 头，WebView 直连会被拦，所以走 `AiPlugin` 原生发请求。只有「自动识别配料」这一步需要联网，其余功能仍然纯离线。
 
 ## 数据
 

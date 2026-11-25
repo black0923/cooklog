@@ -47,8 +47,25 @@ function writeVersionProps() {
   console.log('versionName: ' + ver + '  versionCode: ' + code);
 }
 
+/* 把本机的智谱 Key 写进 Java 常量：只进 APK，不进仓库、不进热更包 */
+function writeAiKey() {
+  let key = '';
+  try { key = fs.readFileSync(path.join(root, 'ai-key.local'), 'utf8').trim(); } catch (e) {}
+  const safe = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  fs.writeFileSync(
+    path.join(root, 'android/app/src/main/java/com/cooklog/kitchen/AiKey.java'),
+    'package com.cooklog.kitchen;\n\n' +
+    '/** 由 scripts/build-apk.js 从 ai-key.local 生成，不要提交到仓库。 */\n' +
+    'public final class AiKey {\n' +
+    '    public static final String ZHIPU = "' + safe + '";\n' +
+    '}\n'
+  );
+  console.log('AI key: ' + (key ? 'injected from ai-key.local' : 'EMPTY (ai-key.local not found)'));
+}
+
 run('node scripts\\build-bundle.js');
 writeVersionProps();
+writeAiKey();
 run('npx cap sync android');
 run('gradlew.bat assembleDebug', path.join(root, 'android'));
 

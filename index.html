@@ -260,7 +260,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.6';
+var APP_VERSION='1.2.7';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -676,8 +676,8 @@ function vForm(){
     f.images.map(function(im,i){return '<div class="photo-item"><img src="'+im+'" alt=""><button class="rm" data-act="rmphoto" data-i="'+i+'">×</button></div>';}).join('')+
     '<div class="photo-add" data-act="photo">+<span>添加图片</span></div></div>'+
     '<div class="hint">可以直接拍照，也能从相册选；自动压缩到约 720px 存在本机，一张约几十 KB</div></div>';
-  h+='<div class="form-row"><label>配料 <span style="color:var(--ink-3);font-weight:400">（逗号、空格或换行分隔）</span></label><textarea class="ta" id="f_ing" placeholder="番茄、鸡蛋、葱">'+esc(f.ingredients)+'</textarea></div>';
   h+='<div class="form-row"><label>做法步骤</label><textarea class="ta" id="f_steps" style="min-height:110px" placeholder="1. …\n2. …">'+esc(f.steps)+'</textarea></div>';
+  h+='<div class="form-row"><label>配料 <span style="color:var(--ink-3);font-weight:400">（写完步骤自动识别，也能自己改）</span></label><textarea class="ta" id="f_ing" placeholder="番茄、鸡蛋、葱">'+esc(f.ingredients)+'</textarea></div>';
   h+='<div class="form-row"><label>记录日期</label><input class="inp" type="date" id="f_date" value="'+f.date+'"></div>';
   h+='<div class="hero-btns" style="margin-top:6px"><button class="btn btn-soft" data-act="go" data-v="'+state.formBack+'">取消</button><button class="btn btn-solid" data-act="save">保存这道菜</button></div>';
   return h+'</div>';
@@ -714,12 +714,49 @@ function vReview(){
 
 /* ---------- 一起点菜（局域网） ---------- */
 var lan={running:false,url:'',ip:'',port:0,code:'',scope:'all',subs:[],busy:false,timer:null,err:'',check:null,checkMsg:''};
+var aiBusy=false,aiLastText='';
 
 function lanPlugin(){
   try{
     if(window.LanShareAvailable&&!window.LanShareAvailable())return null;
     return window.LanShare||null;
   }catch(e){return null;}
+}
+/* 写完步骤离开输入框时，用智谱提取配料并回填（只补不删，保留手填内容） */
+function aiPlugin(){
+  try{
+    if(window.AiAvailable&&!window.AiAvailable())return null;
+    return window.Ai||null;
+  }catch(e){return null;}
+}
+function autoFillIngredients(){
+  var stepsEl=document.getElementById('f_steps');
+  if(!stepsEl||state.view!=='form'||!state.form)return;
+  var text=stepsEl.value.trim();
+  if(text.length<4||text===aiLastText)return;
+  var P=aiPlugin();
+  if(!P)return;
+  aiLastText=text;
+  if(aiBusy)return;
+  aiBusy=true;
+  P.extractIngredients({text:text}).then(function(r){
+    var items=(r&&r.items)||[];
+    if(!items.length)return;
+    if(stepsEl.value.trim()!==text)return;
+    var ingEl=document.getElementById('f_ing');
+    if(!ingEl)return;
+    var cur=splitIngs(ingEl.value),added=0;
+    items.forEach(function(n){
+      n=String(n||'').trim();
+      if(n&&cur.indexOf(n)<0){cur.push(n);added++;}
+    });
+    ingEl.value=cur.join('、');
+    state.form.ingredients=ingEl.value;
+    if(added)toast('已回填 '+added+' 个配料');
+  }).catch(function(e){
+    var m=(e&&e.message)||(typeof e==='string'?e:'识别失败');
+    toast('识别失败：'+m);
+  }).then(function(){aiBusy=false;});
 }
 /* 复制到剪贴板：新版用 clipboard API，旧 WebView 退回 execCommand */
 function copyText(txt){
@@ -927,6 +964,7 @@ function openForm(dish,editId){
     date:base?fmtInputDate(base.date):new Date().toISOString().slice(0,10)
   };
   state.formBack=(editId||dish)?'detail':'mine';
+  aiLastText='';
   state.view='form';render();
 }
 function collectForm(){
@@ -1173,6 +1211,9 @@ app.addEventListener('compositionend',function(e){
   if(e.target.id==='search'){composing=false;state.search=e.target.value;refreshMine();}
 });
 function refreshMine(){var w=document.getElementById('mineWrap');if(w)w.innerHTML=mineBody();}
+app.addEventListener('blur',function(e){
+  if(e.target&&e.target.id==='f_steps')autoFillIngredients();
+},true);
 app.addEventListener('input',function(e){
   if(e.target.id==='search'){
     state.search=e.target.value;

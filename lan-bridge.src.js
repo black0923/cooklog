@@ -4,6 +4,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 window.LanShare = registerPlugin('LanShare');
 window.Backup = registerPlugin('Backup');
+window.Ai = registerPlugin('Ai');
 
 function hasPlugin(name) {
   try {
@@ -25,4 +26,7 @@ window.LanShareAvailable = function () {
 };
 window.BackupAvailable = function () {
   return hasPlugin('Backup');
+};
+window.AiAvailable = function () {
+  return hasPlugin('Ai');
 };
