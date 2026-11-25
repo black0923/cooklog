@@ -1,0 +1,23 @@
+# 依赖
+node_modules/
+
+# 本地便携工具链（JDK 21 / Android SDK，体积数百 MB，各自单独下载）
+tools/
+
+# 构建产物
+dist/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# 由 sync-web.js / build-bundle.js 生成
+www/
+updater-bundle.js
+lan-bridge.js
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c85b3c">
+<title>挑几道想吃的</title>
+<style>
+  :root{
+    --bg:#f7f4ee; --surface:#fff; --surface-2:#fbf9f5;
+    --ink:#2a2420; --ink-2:#6f665e; --ink-3:#a1988d;
+    --line:#e9e2d7; --brand:#c85b3c; --brand-soft:#fbeae2;
+    --star:#e3a13a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+  header{padding:calc(22px + env(safe-area-inset-top)) 18px 6px}
+  .who{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);letter-spacing:.5px}
+  .who svg{width:17px;height:17px}
+  h1{font-size:24px;margin:8px 0 4px;font-weight:700;letter-spacing:.5px}
+  .sub{font-size:13px;color:var(--ink-2);margin:0}
+  main{padding:12px 18px 0}
+
+  .d{display:flex;gap:13px;background:var(--surface);border-radius:16px;padding:10px;
+    margin-bottom:11px;border:2px solid transparent;box-shadow:0 4px 18px rgba(80,55,35,.05);
+    cursor:pointer;position:relative;transition:border-color .15s,background .15s,transform .1s}
+  .d:active{transform:scale(.99)}
+  .d.on{border-color:var(--brand);background:var(--brand-soft)}
+  .d .pic{width:86px;height:86px;border-radius:12px;overflow:hidden;flex:0 0 86px;background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center}
+  .d .pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .d .pic svg{width:30px;height:30px;color:#d8cec0}
+  .d .bd{flex:1;min-width:0;padding:3px 2px 3px 0}
+  .d .nm{font-size:16px;font-weight:600;line-height:1.35;padding-right:22px;
+    overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .d .st{color:var(--star);font-size:12px;letter-spacing:1px;margin-top:2px}
+  .d .ig{font-size:11.5px;color:var(--ink-3);margin-top:5px;
+    overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .tick{position:absolute;right:9px;top:9px;width:21px;height:21px;border-radius:50%;
+    border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center}
+  .tick svg{width:13px;height:13px;opacity:0;color:#fff}
+  .d.on .tick{background:var(--brand);border-color:var(--brand)}
+  .d.on .tick svg{opacity:1}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);
+    backdrop-filter:blur(12px);border-top:1px solid var(--line);
+    padding:11px 18px calc(11px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;
+    max-width:520px;margin:0 auto;z-index:9}
+  .bar .c{font-size:13px;color:var(--ink-2);flex:1}
+  .bar .c b{color:var(--brand);font-size:17px;font-weight:700}
+  button{border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;
+    padding:13px 22px;background:var(--brand);color:#fff;cursor:pointer;transition:opacity .15s,transform .1s}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.35;transform:none}
+
+  .empty{text-align:center;color:var(--ink-3);padding:60px 20px;font-size:14px}
+  .loading{text-align:center;color:var(--ink-3);padding:60px 0;font-size:14px}
+
+  .done{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;
+    align-items:center;justify-content:center;padding:36px;text-align:center;z-index:20}
+  .done.show{display:flex}
+  .done .ok{width:74px;height:74px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+  .done .ok svg{width:38px;height:38px}
+  .done h2{font-size:21px;margin:0 0 10px}
+  .done p{color:var(--ink-2);font-size:14px;margin:0 0 26px;line-height:1.7}
+  .done .picked{font-size:13px;color:var(--ink-3);background:var(--surface);border-radius:14px;
+    padding:14px 18px;margin-bottom:28px;max-width:320px;line-height:1.9}
+  .done button{background:none;color:var(--brand);border:1.5px solid var(--brand);font-size:14px;padding:11px 24px}
+</style>
+</head>
+<body>
+<header>
+  <div class="who">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#c85b3c" stroke-width="1.8"><path d="M4 12h16M6 12c0 5 3 8 6 8s6-3 6-8M9 5c0-1 1-2 3-2s3 1 3 2"/></svg>
+    厨房手记
+  </div>
+  <h1>挑几道想吃的</h1>
+  <p class="sub" id="sub">正在加载…</p>
+</header>
+<main id="list"><div class="loading">稍等…</div></main>
+
+<div class="bar">
+  <div class="c">已选 <b id="num">0</b> 道</div>
+  <button id="submit" disabled>就吃这些</button>
+</div>
+
+<div class="done" id="done">
+  <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.2 5.2L20 6.6"/></svg></div>
+  <h2>已经告诉他了</h2>
+  <p>你点的这几道，他会照着准备</p>
+  <div class="picked" id="pickedText"></div>
+  <button id="again">再改一下</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var CODE = (location.pathname.split('/')[1] || '');
+  var BASE = '/' + CODE + '/';
+  var dishes = [];
+  var chosen = {};
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function stars(n) {
+    var s = '';
+    for (var i = 1; i <= 5; i++) s += i <= n ? '★' : '☆';
+    return s;
+  }
+  function plateSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>';
+  }
+
+  function render() {
+    var list = document.getElementById('list');
+    if (!dishes.length) {
+      list.innerHTML = '<div class="empty">他还没有存下什么菜</div>';
+      document.getElementById('sub').textContent = '';
+      return;
+    }
+    document.getElementById('sub').textContent = '他这里有 ' + dishes.length + ' 道拿手菜，选好点下面';
+    var h = '';
+    dishes.forEach(function (d, i) {
+      h += '<div class="d' + (chosen[i] ? ' on' : '') + '" data-i="' + i + '">' +
+        '<div class="pic">' + (d.hasImg ? '<img src="' + BASE + 'img/' + i + '" alt="" loading="lazy">' : plateSvg()) + '</div>' +
+        '<div class="bd"><div class="nm">' + esc(d.name) + '</div>' +
+        (d.rating ? '<div class="st">' + stars(d.rating) + '</div>' : '') +
+        (d.ings ? '<div class="ig">' + esc(d.ings) + '</div>' : '') + '</div>' +
+        '<div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.2 5.2L20 6.6"/></svg></div>' +
+        '</div>';
+    });
+    list.innerHTML = h;
+    syncBar();
+  }
+
+  function syncBar() {
+    var n = Object.keys(chosen).filter(function (k) { return chosen[k]; }).length;
+    document.getElementById('num').textContent = n;
+    document.getElementById('submit').disabled = n === 0;
+  }
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var el = e.target.closest('.d');
+    if (!el) return;
+    var i = el.getAttribute('data-i');
+    chosen[i] = !chosen[i];
+    el.classList.toggle('on', !!chosen[i]);
+    syncBar();
+  });
+
+  document.getElementById('submit').addEventListener('click', function () {
+    var btn = this;
+    var names = Object.keys(chosen).filter(function (k) { return chosen[k]; })
+      .map(function (k) { return dishes[+k].name; });
+    if (!names.length) return;
+    btn.disabled = true;
+    btn.textContent = '发送中…';
+    fetch(BASE + 'submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ picks: names })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (res && res.ok) {
+        document.getElementById('pickedText').innerHTML = names.map(function (n) { return '· ' + esc(n); }).join('<br>');
+        document.getElementById('done').classList.add('show');
+      } else {
+        throw new Error('bad');
+      }
+    }).catch(function () {
+      btn.textContent = '发送失败，重试';
+      btn.disabled = false;
+    });
+  });
+
+  document.getElementById('again').addEventListener('click', function () {
+    document.getElementById('done').classList.remove('show');
+    document.getElementById('submit').textContent = '就吃这些';
+    syncBar();
+  });
+
+  fetch(BASE + 'api/data').then(function (r) { return r.json(); }).then(function (d) {
+    dishes = (d && d.dishes) || [];
+    render();
+  }).catch(function () {
+    document.getElementById('list').innerHTML = '<div class="empty">打不开了：可能共选已经结束<br>让主人重新生成一个</div>';
+    document.getElementById('sub').textContent = '';
+  });
+})();
+</script>
+</body>
+</html>

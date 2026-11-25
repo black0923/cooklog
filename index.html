@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c85b3c">
+<title>厨房手记 · 我的做菜记忆</title>
+<style>
+  :root{
+    --bg:#f7f4ee; --surface:#ffffff; --surface-2:#fbf9f5;
+    --ink:#2a2420; --ink-2:#6f665e; --ink-3:#a1988d;
+    --line:#e9e2d7; --brand:#c85b3c; --brand-soft:#fbeae2;
+    --star:#e3a13a; --danger:#c0392b;
+    --r:16px; --sh:0 4px 20px rgba(80,55,35,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#ded7cc;color:var(--ink);line-height:1.55;font-size:15px}
+  .phone{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:calc(74px + env(safe-area-inset-bottom));box-shadow:0 0 40px rgba(0,0,0,.08)}
+  .topbar{padding:calc(14px + env(safe-area-inset-top)) 20px 10px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:.5px}
+  .brand svg{width:22px;height:22px}
+  .top-sub{font-size:12px;color:var(--ink-3)}
+  .content{padding:4px 18px 20px}
+
+  .card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:18px;margin-bottom:14px}
+  .sec-title{font-size:13px;color:var(--ink-2);font-weight:500;margin:22px 2px 10px;display:flex;justify-content:space-between;align-items:center}
+  .sec-title small{color:var(--ink-3);font-weight:400}
+  .hero{background:linear-gradient(145deg,#c85b3c,#a8462f);color:#fff;border-radius:20px;padding:22px;margin-top:6px;position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .hero .label{font-size:12px;opacity:.85;letter-spacing:1px}
+  .hero .dish{font-size:30px;font-weight:700;margin:8px 0 6px;line-height:1.2}
+  .hero .meta{font-size:13px;opacity:.9;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .hero .stars{color:#ffe0a8}
+  .hero .ph{margin:16px -22px 0;height:180px;background:rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
+  .hero .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .hero .ph svg{width:56px;height:56px;opacity:.4}
+  .hero-btns{display:flex;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:11px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;transition:opacity .15s,transform .1s}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--brand);color:#fff}
+  .hero .btn-primary{background:#fff;color:var(--brand)}
+  .btn-ghost{background:rgba(255,255,255,.18);color:#fff}
+  .btn-solid{background:var(--brand);color:#fff}
+  .btn-soft{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+  .btn-danger{background:#fdecea;color:var(--danger)}
+  .btn-block{width:100%}
+  .hero-btns .btn{flex:1}
+
+  .mini{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .mini::-webkit-scrollbar{display:none}
+  .mini .m{min-width:132px;background:var(--surface);border-radius:14px;box-shadow:var(--sh);padding:10px;flex:0 0 auto}
+  .mini .m .ph{height:74px;border-radius:9px;background:var(--surface-2);overflow:hidden;margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+  .mini .m .ph img{width:100%;height:100%;object-fit:cover}
+  .mini .m .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini .m .sb{font-size:11px;color:var(--ink-3)}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .dishcard{background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:hidden;cursor:pointer}
+  .dishcard .ph{aspect-ratio:1.15;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+  .dishcard .ph img{width:100%;height:100%;object-fit:cover}
+  .dishcard .info{padding:11px 12px 13px}
+  .dishcard .nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dishcard .row{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:11px;color:var(--ink-3)}
+  .stars{color:var(--star);letter-spacing:1px;font-size:12px}
+  .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
+  .search:focus{border-color:var(--brand)}
+
+  .form-row{margin-bottom:16px}
+  .form-row label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:7px;font-weight:500}
+  .inp,.ta{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:15px;font-family:inherit;background:var(--surface-2);color:var(--ink);outline:none}
+  .inp:focus,.ta:focus{border-color:var(--brand);background:#fff}
+  .ta{resize:vertical;min-height:76px;line-height:1.6}
+  .star-pick{display:flex;gap:6px}
+  .star-pick span{font-size:32px;color:var(--line);cursor:pointer;line-height:1;transition:color .1s}
+  .star-pick span.on{color:var(--star)}
+  .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .photo-item{position:relative;aspect-ratio:1;border-radius:11px;overflow:hidden;background:var(--surface-2)}
+  .photo-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-item .rm{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:15px;line-height:1;cursor:pointer;z-index:2}
+  .photo-add{aspect-ratio:1;border:1.5px dashed var(--line);border-radius:11px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink-3);cursor:pointer;font-size:26px;line-height:1}
+  .photo-add span{font-size:11px}
+  .hint{font-size:12px;color:var(--ink-3);margin-top:6px}
+
+  .tl{position:relative;padding-left:16px}
+  .tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .tl .ev{position:relative;margin-bottom:16px}
+  .tl .ev:before{content:"";position:absolute;left:-16px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--brand);border:2px solid var(--bg)}
+  .tl .ev .imgs{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;scrollbar-width:none}
+  .tl .ev .imgs::-webkit-scrollbar{display:none}
+  .tl .ev .imgs img{width:110px;height:110px;object-fit:cover;border-radius:10px;flex:none;background:var(--surface-2)}
+  .tl .ev .d{font-size:12px;color:var(--ink-3)}
+  .tl .ev pre{white-space:pre-wrap;font-family:inherit;font-size:13px;background:var(--surface-2);padding:10px 12px;border-radius:10px;margin:8px 0 0;color:var(--ink-2)}
+  .ev-btns{display:flex;gap:8px;margin-top:8px}
+  .ev-btns .btn{padding:6px 12px;font-size:12px}
+  .det-imgs{display:flex;gap:8px;overflow-x:auto;margin-top:12px;scrollbar-width:none}
+  .det-imgs::-webkit-scrollbar{display:none}
+  .det-imgs img{width:132px;height:132px;object-fit:cover;border-radius:12px;flex:none;background:var(--surface-2);cursor:zoom-in}
+  /* 图片查看器 */
+  .viewer{position:fixed;inset:0;background:#0b0b0c;z-index:60;display:none;flex-direction:column;
+    opacity:0;transition:opacity .18s ease}
+  .viewer.show{display:flex;opacity:1}
+  .viewer .v-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:8px;min-height:0}
+  .viewer .v-stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;display:block}
+  .viewer .v-bar{flex:0 0 auto;padding:10px 16px calc(16px + env(safe-area-inset-bottom));display:flex;
+    align-items:center;justify-content:space-between;color:#fff;font-size:13px}
+  .viewer .v-count{opacity:.7}
+  .viewer .v-close{background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:10px;
+    padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer}
+  .viewer .v-nav{position:absolute;top:0;bottom:56px;width:38%;border:none;background:none;cursor:pointer;z-index:2}
+  .viewer .v-prev{left:0}
+  .viewer .v-next{right:0}
+  .viewer .v-dots{position:absolute;left:0;right:0;bottom:58px;display:flex;gap:6px;justify-content:center;pointer-events:none}
+  .viewer .v-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35)}
+  .viewer .v-dots i.on{background:#fff}
+  .picks-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .picks-head .pt{display:flex;align-items:baseline;gap:7px}
+  .picks-head .pt b{font-size:16px;font-weight:700}
+  .picks-head .pt span{font-size:12px;color:var(--ink-3)}
+  .pick-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .pick-chip{display:inline-flex;align-items:center;gap:2px;background:var(--brand-soft);border-radius:12px;padding:3px 5px 3px 12px}
+  .pick-chip b{font-size:13.5px;font-weight:600;color:#9e4429;cursor:pointer}
+  .pick-chip .x{border:none;background:none;color:#bd735c;font-size:17px;line-height:1;padding:3px 6px;cursor:pointer;font-family:inherit}
+  .picks-buy{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .picks-buy .bl{font-size:12px;color:var(--ink-3);margin-bottom:2px}
+
+  /* 一起点菜（局域网） */
+  .qr-wrap{background:#fff;border-radius:15px;padding:14px;display:flex;justify-content:center;border:1px solid var(--line)}
+  .qr-wrap svg{width:168px;height:168px;display:block}
+  .url-box{display:flex;align-items:center;gap:9px;margin-top:12px;background:var(--surface-2);
+    border:1px dashed var(--line);border-radius:12px;padding:7px 7px 7px 10px}
+  .url-box .u{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+    line-height:1.4;word-break:break-all;color:var(--brand);font-weight:600;letter-spacing:-.2px}
+  .url-box .cp{flex:0 0 auto;background:var(--brand);color:#fff;border:none;border-radius:9px;
+    padding:9px 10px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;
+    min-width:54px;text-align:center}
+  .url-box .cp:active{transform:scale(.96)}
+  .url-box .cp.done{background:#2f8f5b}
+  .share-tip{font-size:12.5px;color:var(--ink-3);text-align:center;margin-top:10px;line-height:1.7}
+  .share-warn{margin-top:10px;font-size:12.5px;line-height:1.6;color:#a33a2a;background:#fdf1ee;
+    border:1px solid #f2d7d0;border-radius:10px;padding:9px 11px}
+  .seg{display:flex;gap:9px;margin-top:12px}
+  .seg button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 8px;font-size:13px;
+    font-family:inherit;color:var(--ink-2);cursor:pointer;transition:.15s}
+  .seg button.on{border-color:var(--brand);color:var(--brand);background:var(--brand-soft);font-weight:600}
+  .who-pick{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  .who-pick span{font-size:12.5px;background:var(--brand-soft);color:#9e4429;border-radius:999px;padding:4px 11px;font-weight:500}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#2f8f5b}
+  .live i{width:7px;height:7px;border-radius:50%;background:#2f8f5b;display:inline-block;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .reco{display:flex;flex-direction:column;gap:10px}
+  .reco-item{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;box-shadow:var(--sh)}
+  .reco-item .ph{width:78px;height:78px;border-radius:12px;overflow:hidden;flex:none;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+  .reco-item .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .reco-item .ph svg{width:30px;height:30px;opacity:.4}
+  .reco-item .ri{flex:1;min-width:0}
+  .reco-item .nm{font-size:16px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reco-item .ingline{margin-top:6px;gap:4px}
+  .reco-item .ingline .ii{font-size:11px;padding:2px 7px 2px 4px}
+  .reco-item .ingline .ii svg{width:14px;height:14px}
+  .steps{white-space:pre-wrap;font-family:inherit;font-size:13.5px;line-height:1.75;background:var(--surface-2);padding:12px 14px;border-radius:12px;margin:0;color:var(--ink-2)}
+  .sub-title{font-size:13px;font-weight:600;color:var(--ink-2);margin:16px 0 8px}
+  .ingline{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
+  .ingline .ii{display:inline-flex;align-items:center;gap:2px;background:var(--surface-2);border-radius:14px;padding:3px 9px 3px 5px;font-size:12px;color:var(--ink-2)}
+  .ingline .ii svg{width:16px;height:16px}
+  .hero .ingline .ii{background:rgba(255,255,255,.14);color:#fff}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+  .stats .s .v{font-size:24px;font-weight:700;color:var(--brand)}
+  .stats .s .k{font-size:11px;color:var(--ink-3)}
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-3)}
+  .empty svg{width:64px;height:64px;opacity:.35;margin-bottom:10px}
+  .empty p{margin:6px 0}
+
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:20}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-3);font-size:11px;cursor:pointer;background:none;border:none;font-family:inherit}
+  .tab svg{width:22px;height:22px}
+  .tab.on{color:var(--brand)}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(42,36,32,.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;max-width:86%;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1}
+  .modal-mask{position:fixed;inset:0;background:rgba(30,24,20,.55);backdrop-filter:blur(3px);z-index:60;display:none;align-items:center;justify-content:center;padding:24px}
+  .modal-mask.show{display:flex}
+  .modal{width:100%;max-width:360px;background:var(--surface);border-radius:20px;padding:24px 20px 18px;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
+  .modal-icon{width:46px;height:46px;border-radius:50%;background:#fdecea;color:var(--danger);font-size:26px;font-weight:700;line-height:46px;margin:0 auto 12px}
+  .modal-title{font-size:17px;font-weight:700;margin-bottom:8px}
+  .modal-desc{font-size:13px;color:var(--ink-2);line-height:1.7;margin-bottom:14px;text-align:left}
+  .modal-warn{background:#fff6f4;border:1px solid #f5d5cf;color:#a33326;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;text-align:left;margin-bottom:14px}
+  .cf-check{display:flex;align-items:center;gap:9px;text-align:left;font-size:13px;color:var(--ink);margin-bottom:18px;cursor:pointer;user-select:none}
+  .cf-check input{width:18px;height:18px;accent-color:var(--danger);flex:none;margin:0}
+  .modal-btns{display:flex;gap:10px}
+  .modal-btns .btn{flex:1}
+  .btn-danger-solid{background:var(--danger);color:#fff}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .adv{margin-top:12px}
+  .adv summary{font-size:12px;color:var(--ink-3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;padding:2px 0}
+  .adv summary::-webkit-details-marker{display:none}
+  .adv summary:before{content:"＋";font-size:11px;opacity:.8}
+  .adv[open] summary:before{content:"－"}
+
+  .sheet-mask{position:fixed;inset:0;background:rgba(30,24,20,.5);z-index:70;display:none}
+  .sheet-mask.show{display:block}
+  .sheet{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-radius:18px 18px 0 0;padding:10px 14px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -10px 34px rgba(0,0,0,.2)}
+  .sheet button{display:block;width:100%;border:none;background:none;font-family:inherit;font-size:16px;color:var(--ink);padding:15px 12px;border-radius:12px;cursor:pointer;text-align:center}
+  .sheet button:active{background:var(--surface-2)}
+  .sheet .opt{border-bottom:1px solid var(--line);border-radius:0}
+  .sheet .cs{color:var(--ink-3);font-size:15px;border-radius:0;margin-top:4px;padding-top:16px;border-top:1px solid var(--line)}
+  @media(min-width:520px){.phone{margin:14px auto;border-radius:24px;min-height:calc(100vh - 28px)}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c85b3c" stroke-width="1.8"><path d="M4 12h16M6 12c0 5 3 8 6 8s6-3 6-8M9 5c0-1 1-2 3-2s3 1 3 2"/><path d="M3 12h18"/></svg>
+      厨房手记
+    </div>
+    <div class="top-sub" id="topSub"></div>
+  </div>
+  <div class="content" id="app"></div>
+</div>
+<div class="tabbar" id="tabbar"></div>
+<div class="toast" id="toast"></div>
+<div class="viewer" id="viewer">
+  <div class="v-stage"><img id="vImg" alt=""></div>
+  <button class="v-nav v-prev" data-act="vPrev" aria-label="上一张"></button>
+  <button class="v-nav v-next" data-act="vNext" aria-label="下一张"></button>
+  <div class="v-dots" id="vDots"></div>
+  <div class="v-bar"><span class="v-count" id="vCount"></span><button class="v-close" data-act="vClose">关闭</button></div>
+</div>
+<div class="modal-mask" id="confirmMask">
+  <div class="modal">
+    <div class="modal-icon">!</div>
+    <div class="modal-title" id="cfTitle"></div>
+    <div class="modal-desc" id="cfDesc"></div>
+    <div class="modal-warn" id="cfWarn"></div>
+    <label class="cf-check"><input type="checkbox" id="cfCheck"><span id="cfCheckLabel"></span></label>
+    <div class="modal-btns">
+      <button class="btn btn-soft" data-act="cfCancel">取消</button>
+      <button class="btn btn-danger btn-danger-solid" data-act="cfOk" id="cfOk" disabled>确认</button>
+    </div>
+  </div>
+</div>
+<div class="sheet-mask" id="sheetMask">
+  <div class="sheet">
+    <button class="opt" data-act="photoCam">拍照</button>
+    <button class="opt" data-act="photoAlbum">从相册选择</button>
+    <button class="cs" data-act="sheetClose">取消</button>
+  </div>
+</div>
+<input type="file" id="fileIn" accept="image/*" multiple style="display:none">
+<input type="file" id="camIn" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="jsonIn" accept="*/*" style="display:none">
+<script src="updater-bundle.js"></script>
+<script src="icons-data.js"></script>
+<script src="qrcode.js"></script>
+<script src="lan-bridge.js"></script>
+<script>
+(function(){
+'use strict';
+
+var APP_VERSION='1.2.2';
+var UPDATE_URL_KEY='cooklog_update_url_v1';
+/* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
+var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
+function updateBase(){
+  var v=(localStorage.getItem(UPDATE_URL_KEY)||'').trim();
+  return (v||DEFAULT_UPDATE_URL||'').replace(/\/+$/,'');
+}
+function updaterApi(){
+  try{
+    if(window.CapgoUpdater&&window.CapgoUpdater.CapacitorUpdater)return window.CapgoUpdater.CapacitorUpdater;
+    if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.CapacitorUpdater)return window.Capacitor.Plugins.CapacitorUpdater;
+  }catch(e){}
+  return null;
+}
+function isNative(){return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}
+function notifyReady(){
+  var u=updaterApi();
+  if(u&&u.notifyAppReady){try{u.notifyAppReady().catch(function(){});}catch(e){}}
+}
+/* 把原生/插件的英文报错翻成人话，别把 "Failed to download from:" 直接甩给用户 */
+function updErr(e){
+  var m=''+(e&&(e.message||e.errorMessage)||e||'');
+  if(/checksum/i.test(m))return '更新包校验信息缺失，请稍后再试';
+  if(/HTTP|status|code/i.test(m)&&/40[34]|5\d\d/.test(m))return '更新包地址暂时打不开，请稍后再试';
+  if(/unable to resolve host|timeout|network|failed to connect|socket/i.test(m))return '网络连接失败，换个网络再试';
+  if(/failed to download/i.test(m))return '下载失败，请稍后重试';
+  if(/version|downgrade/i.test(m))return '版本信息不对，请稍后再试';
+  return m?m.slice(0,60):'未知原因';
+}
+function checkUpdate(manual){
+  var u=updaterApi();
+  if(!u){if(manual)toast('请在 App 内使用更新功能');return;}
+  var base=updateBase();
+  if(!base){if(manual)toast('还没有更新地址');return;}
+  if(manual)toast('正在检查更新…');
+  fetch(base+'/update.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(info){
+    if(!info||!info.version){if(manual)toast('更新配置无效');return;}
+    if(info.version===APP_VERSION){if(manual)toast('已是最新版本 '+APP_VERSION);return;}
+    var zurl=info.zip||(base+'/'+(info.file||('cooklog-'+info.version+'.zip')));
+    /* 插件 8.x 的原生下载会先查校验值，缺了在发请求前就被拒（Checksum required） */
+    var sum=(info.sha256||info.checksum||'').trim();
+    if(!/^[0-9a-f]{64}$/i.test(sum)){if(manual)toast('更新清单不完整，请稍后再试');return;}
+    askConfirm({
+      title:'发现新版本 '+info.version,
+      desc:'当前版本 '+APP_VERSION+'。更新只改变界面和功能，不会动你的菜谱数据。',
+      warn:'更新完成后 App 会自动重启。',
+      checkLabel:'我已了解，立即更新',
+      okText:'下载并更新',
+      needCheck:false,
+      danger:false
+    },function(){
+      toast('正在下载新版本…');
+      u.download({version:info.version,url:zurl,checksum:sum})
+        .then(function(bundle){
+          /* set() 只接受 bundle id，且原生会自动重载，Promise 不会 resolve */
+          toast('正在应用更新…');
+          return u.set({id:bundle.id});
+        })
+        .catch(function(e){toast('更新失败：'+updErr(e));});
+    });
+  }).catch(function(){if(manual)toast('检查更新失败，请核对地址');});
+}
+
+/* ---------- 存储层：IndexedDB 优先，回退 localStorage，全离线 ---------- */
+var Store=(function(){
+  var db=null,useLS=false,LS='cooklog_logs_v1';
+  function once(target,type,cb){
+    target.addEventListener(type,function h(){target.removeEventListener(type,h);cb();});
+  }
+  function open(){return new Promise(function(res){
+    try{
+      if(!window.indexedDB){useLS=true;return res();}
+      var r=indexedDB.open('cooklog_db',1);
+      once(r,'upgradeneeded',function(){try{r.result.createObjectStore('logs',{keyPath:'id'});}catch(e){}});
+      once(r,'success',function(){db=r.result;res();});
+      once(r,'error',function(){useLS=true;res();});
+    }catch(e){useLS=true;res();}
+  });}
+  function getAll(){return new Promise(function(res){
+    if(useLS){try{res(JSON.parse(localStorage.getItem(LS)||'[]'));}catch(e){res([])}return;}
+    try{
+      var q=db.transaction(['logs'],'readonly').objectStore('logs').getAll();
+      once(q,'success',function(){res(q.result||[]);});
+      once(q,'error',function(){res([]);});
+    }catch(e){res(getAllSync());}
+  });}
+  function save(v){return new Promise(function(res){
+    if(useLS){var a=getAllSync(),i=a.findIndex(function(x){return x.id===v.id});if(i>=0)a[i]=v;else a.push(v);localStorage.setItem(LS,JSON.stringify(a));return res();}
+    try{var t=db.transaction(['logs'],'readwrite');t.objectStore('logs').put(v);once(t,'complete',res);once(t,'error',res);}
+    catch(e){var a2=getAllSync(),i2=a2.findIndex(function(x){return x.id===v.id});if(i2>=0)a2[i2]=v;else a2.push(v);localStorage.setItem(LS,JSON.stringify(a2));res();}
+  });}
+  function remove(id){return new Promise(function(res){
+    if(useLS){localStorage.setItem(LS,JSON.stringify(getAllSync().filter(function(x){return x.id!==id})));return res();}
+    try{var t=db.transaction(['logs'],'readwrite');t.objectStore('logs').delete(id);once(t,'complete',res);once(t,'error',res);}
+    catch(e){localStorage.setItem(LS,JSON.stringify(getAllSync().filter(function(x){return x.id!==id})));res();}
+  });}
+  function clear(){return new Promise(function(res){
+    if(useLS){localStorage.removeItem(LS);return res();}
+    try{var t=db.transaction(['logs'],'readwrite');t.objectStore('logs').clear();once(t,'complete',res);once(t,'error',res);}
+    catch(e){localStorage.removeItem(LS);res();}
+  });}
+  function getAllSync(){try{return JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){return[]}}
+  return {open:open,getAll:getAll,save:save,remove:remove,clear:clear,isLS:function(){return useLS}};
+})();
+
+/* ---------- 工具 ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function fmtDate(ts){var d=new Date(ts);return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();}
+function fmtInputDate(ts){var d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function starStr(n){var s='';for(var i=1;i<=5;i++)s+=i<=n?'★':'☆';return s;}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2000);}
+function imgsOf(l){if(!l)return[];if(Array.isArray(l.images))return l.images.filter(Boolean);return l.image?[l.image]:[];}
+function splitIngs(text){return String(text||'').split(/[,，、;；\n\r\t ]+/).map(function(s){return s.trim();}).filter(Boolean);}
+
+/* ---------- 今天这顿：采购清单（只存菜名，轻量，localStorage） ---------- */
+var PICKS_KEY='cooklog_picks_v1';
+var picks=(function(){
+  try{var a=JSON.parse(localStorage.getItem(PICKS_KEY)||'[]');return Array.isArray(a)?a.filter(function(x){return typeof x==='string'&&x;}):[];}
+  catch(e){return[];}
+})();
+function savePicks(){try{localStorage.setItem(PICKS_KEY,JSON.stringify(picks));}catch(e){}}
+function inPicks(name){return picks.indexOf(name)>=0;}
+function addPick(name){if(name&&!inPicks(name)){picks.push(name);savePicks();}}
+function removePick(name){var n=picks.length;picks=picks.filter(function(x){return x!==name;});if(picks.length!==n)savePicks();}
+function pickDishes(){
+  var map={};byDish().forEach(function(d){map[d.dish]=d;});
+  return picks.filter(function(n){return map[n];}).map(function(n){return map[n];});
+}
+/* 合并清单里每道菜（按最新一条记录）的配料，去重 */
+function picksIngs(ds){
+  var seen={},out=[];
+  ds.forEach(function(d){
+    splitIngs(d.lastLog?d.lastLog.ingredients:'').forEach(function(n){
+      if(!seen[n]){seen[n]=1;out.push(n);}
+    });
+  });
+  return out;
+}
+
+/* 自定义确认弹层：不依赖原生 confirm（预览面板/部分 WebView 会直接放行） */
+var confirmCb=null;
+function askConfirm(opt,cb){
+  confirmCb=cb;
+  document.getElementById('cfTitle').textContent=opt.title||'确认操作';
+  var descEl=document.getElementById('cfDesc'),warnEl=document.getElementById('cfWarn');
+  descEl.textContent=opt.desc||'';
+  descEl.style.display=opt.desc?'block':'none';
+  warnEl.textContent=opt.warn||'';
+  warnEl.style.display=opt.warn?'block':'none';
+  document.getElementById('cfCheckLabel').textContent=opt.checkLabel||'我已了解此操作不可恢复';
+  document.getElementById('cfOk').textContent=opt.okText||'确认';
+  var need=opt.needCheck!==false;
+  document.querySelector('.cf-check').style.display=need?'flex':'none';
+  var chk=document.getElementById('cfCheck');chk.checked=!need;
+  var okBtn=document.getElementById('cfOk');
+  okBtn.className='btn '+(opt.danger===false?'btn-solid':'btn-danger btn-danger-solid');
+  okBtn.disabled=need;
+  var iconEl=document.querySelector('#confirmMask .modal-icon'),dg=opt.danger!==false;
+  iconEl.textContent=dg?'!':'?';
+  iconEl.style.background=dg?'#fdecea':'var(--brand-soft)';
+  iconEl.style.color=dg?'var(--danger)':'var(--brand)';
+  document.getElementById('confirmMask').classList.add('show');
+}
+function closeConfirm(){document.getElementById('confirmMask').classList.remove('show');confirmCb=null;}
+function closeSheet(){document.getElementById('sheetMask').classList.remove('show');}
+
+/* ---------- 图片查看 ---------- */
+var viewerList=[],viewerIdx=0;
+function drawViewer(){
+  document.getElementById('vImg').src=viewerList[viewerIdx]||'';
+  document.getElementById('vCount').textContent=(viewerIdx+1)+' / '+viewerList.length;
+  var dots=document.getElementById('vDots');
+  dots.innerHTML=viewerList.length>1?viewerList.map(function(_,i){
+    return '<i class="'+(i===viewerIdx?'on':'')+'"></i>';
+  }).join(''):'';
+}
+function openViewer(list,idx){
+  if(!list||!list.length)return;
+  viewerList=list;
+  viewerIdx=Math.max(0,Math.min(idx||0,list.length-1));
+  drawViewer();
+  document.getElementById('viewer').classList.add('show');
+}
+function moveViewer(d){
+  if(viewerList.length<2)return;
+  viewerIdx=(viewerIdx+d+viewerList.length)%viewerList.length;
+  drawViewer();
+}
+function closeViewer(){
+  document.getElementById('viewer').classList.remove('show');
+  document.getElementById('vImg').src='';
+  viewerList=[];
+}
+document.getElementById('sheetMask').addEventListener('click',function(e){
+  if(e.target===this)closeSheet();
+});
+document.getElementById('cfCheck').addEventListener('change',function(){
+  document.getElementById('cfOk').disabled=!this.checked;
+});
+document.getElementById('confirmMask').addEventListener('click',function(e){
+  if(e.target===this)closeConfirm();
+});
+/* 点图片外的空白处收起大图，但点图本身不关 */
+document.getElementById('viewer').addEventListener('click',function(e){
+  if(e.target===this||(e.target.className||'').indexOf('v-stage')===0)closeViewer();
+});
+
+/* ---------- 食材图标 ---------- */
+var ICONS=window.ICONS||{};
+function svg(name){return ICONS[name]?'<svg viewBox="0 0 36 36">'+ICONS[name]+'</svg>':'';}
+var ING_MAP={
+  '鸡蛋':'egg','蛋':'egg','番茄':'tomato','西红柿':'tomato','洋葱':'onion','蒜':'garlic','大蒜':'garlic',
+  '姜':'ginger','生姜':'ginger','辣椒':'chili','干辣椒':'chili','小米辣':'chili','葱':'scallion','香葱':'scallion',
+  '胡萝卜':'carrot','土豆':'potato','马铃薯':'potato','玉米':'corn','黄瓜':'cucumber','茄子':'eggplant',
+  '蘑菇':'mushroom','香菇':'mushroom','金针菇':'mushroom','白菜':'cabbage','娃娃菜':'cabbage','西兰花':'broccoli',
+  '青椒':'pepper','彩椒':'pepper','柠檬':'lemon','苹果':'apple','香蕉':'banana','大米':'rice','米饭':'rice',
+  '面条':'noodles','挂面':'noodles','面包':'bread','面粉':'flour','猪肉':'meat','五花肉':'meat','瘦肉':'meat',
+  '牛肉':'meat','羊肉':'meat','鸡肉':'chicken','鸡胸':'chicken','鸡翅':'chicken','鸡':'chicken','鱼':'fish','虾':'shrimp',
+  '蟹':'crab','牛奶':'milk','奶酪':'cheese','黄油':'butter','食用油':'oil','油':'oil','盐':'salt','糖':'sugar',
+  '冰糖':'sugar','酱油':'soy','生抽':'soy','老抽':'soy','醋':'vinegar','蜂蜜':'honey','花生':'peanut',
+  '豆腐':'tofu','黄豆':'bean','青豆':'bean','豆':'bean'
+};
+var ING_KEYS=Object.keys(ING_MAP).sort(function(a,b){return b.length-a.length;});
+function iconFor(name){
+  if(ING_MAP[name])return ING_MAP[name];
+  for(var i=0;i<ING_KEYS.length;i++){if(name.indexOf(ING_KEYS[i])>=0)return ING_MAP[ING_KEYS[i]];}
+  return '';
+}
+function ingTags(text){
+  var arr=splitIngs(text);if(!arr.length)return '';
+  return '<div class="ingline">'+arr.map(function(n){
+    var ic=iconFor(n);return '<span class="ii">'+(ic?svg(ic):'')+esc(n)+'</span>';
+  }).join('')+'</div>';
+}
+var UI={
+  plate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+  add:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'
+};
+function ph(imgs,cls){
+  var a=imgs||[];
+  return a.length?'<div class="'+cls+'"><img src="'+a[0]+'" alt=""></div>':'<div class="'+cls+'">'+UI.plate+'</div>';
+}
+
+/* ---------- 状态 ---------- */
+var state={view:'today',logs:[],search:'',detailDish:'',form:null,formBack:'today',batch:null,batchExclude:[]};
+
+function byDish(){
+  var m={};
+  state.logs.forEach(function(l){
+    var k=l.dish;
+    if(!m[k])m[k]={dish:k,best:0,count:0,last:0,lastLog:null,images:[],ings:''};
+    var d=m[k];d.count++;
+    if(l.rating>d.best)d.best=l.rating;
+    if(l.date>d.last){d.last=l.date;d.lastLog=l;}
+    imgsOf(l).forEach(function(im){if(d.images.indexOf(im)<0)d.images.push(im);});
+    if(l.ingredients&&d.ings.indexOf(l.ingredients)<0)d.ings+=(d.ings?' ':'')+l.ingredients;
+  });
+  return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.last-a.last;});
+}
+/* 按评分加权抽一批（不放回），尽量避开刚看过的那批 */
+function pickBatch(n,exclude){
+  var ds=byDish();if(!ds.length)return [];
+  var hi=ds.filter(function(d){return d.best>=4;});
+  var pool=hi.length>=Math.min(2,ds.length)?hi:ds;
+  var ex={};(exclude||[]).forEach(function(x){ex[x]=1;});
+  var out=[],used={};
+  n=Math.min(n,pool.length);
+  while(out.length<n){
+    var cand=pool.filter(function(d){return !used[d.dish];});
+    if(!cand.length)break;
+    var fresh=cand.filter(function(d){return !ex[d.dish];});
+    var src=fresh.length?fresh:cand;
+    var total=0;src.forEach(function(d){total+=Math.pow(d.best,3);});
+    var r=Math.random()*total,pick=src[src.length-1];
+    for(var i=0;i<src.length;i++){r-=Math.pow(src[i].best,3);if(r<=0){pick=src[i];break;}}
+    used[pick.dish]=1;out.push(pick);
+  }
+  return out;
+}
+function batchList(){
+  var ds=byDish();if(!ds.length)return [];
+  var map={};ds.forEach(function(d){map[d.dish]=d;});
+  var names=(state.batch||[]).filter(function(n){return map[n];});
+  var need=Math.min(3,ds.length);
+  if(names.length<need||state.batchCount!==ds.length){
+    state.batch=pickBatch(need,state.batchExclude).map(function(d){return d.dish;});
+    names=state.batch;
+  }
+  state.batchCount=ds.length;
+  return names.map(function(n){return map[n];}).filter(Boolean);
+}
+function photoBytes(){
+  return state.logs.reduce(function(s,l){
+    return s+imgsOf(l).reduce(function(a,im){return a+Math.round(im.length*0.75);},0);
+  },0);
+}
+function sizeText(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';}
+
+/* ---------- 视图 ---------- */
+var app=document.getElementById('app');
+var VIEWS={today:vToday,mine:vMine,detail:vDetail,form:vForm,review:vReview,share:vShare};
+function render(){
+  app.innerHTML=(VIEWS[state.view]||vToday)();
+  renderTabs();
+  document.getElementById('topSub').textContent=state.logs.length?byDish().length+' 道菜':'开始记第一道菜';
+}
+function renderTabs(){
+  var tabs=[['today','今天吃什么',UI.plate],['mine','我的菜',UI.grid],['form','记一道',UI.add],['review','回顾',UI.chart]];
+  document.getElementById('tabbar').innerHTML=tabs.map(function(t){
+    var on=state.view===t[0]||(state.view==='detail'&&t[0]==='mine')||(state.view==='form'&&t[0]==='form');
+    return '<button class="tab '+(on?'on':'')+'" data-act="go" data-v="'+t[0]+'">'+t[2]+'<span>'+t[1]+'</span></button>';
+  }).join('');
+}
+function vPicks(){
+  var ds=pickDishes();
+  if(!ds.length)return '';
+  var ings=picksIngs(ds);
+  var h='<div class="card" style="margin-top:6px">'+
+    '<div class="picks-head"><div class="pt"><b>今天这顿</b><span>'+ds.length+' 道菜</span></div>'+
+    '<button class="btn btn-soft" style="padding:5px 11px;font-size:12px" data-act="clearPicks">清空</button></div>'+
+    '<div class="pick-chips">'+ds.map(function(d){
+      return '<span class="pick-chip"><b data-act="detail" data-dish="'+esc(d.dish)+'">'+esc(d.dish)+'</b>'+
+        '<button class="x" data-act="unpick" data-dish="'+esc(d.dish)+'">×</button></span>';
+    }).join('')+'</div>';
+  if(ings.length){
+    h+='<div class="picks-buy"><div class="bl">要买这些</div><div class="ingline" style="margin-top:4px">'+
+      ings.map(function(n){var ic=iconFor(n);return '<span class="ii">'+(ic?svg(ic):'')+esc(n)+'</span>';}).join('')+'</div></div>';
+  }
+  return h+'</div>';
+}
+function vToday(){
+  if(!state.logs.length)return '<div class="empty">'+UI.plate+'<p>还没有任何记录</p><p>从下面「记一道」开始，把做过的菜存起来</p><button class="btn btn-solid" data-act="go" data-v="form" style="margin-top:14px">记第一道菜</button></div>';
+  var list=batchList(),pk=vPicks();
+  var h=pk;
+  h+='<div class="sec-title" style="margin-top:'+(pk?'16px':'4px')+'">今天吃什么 <button class="btn btn-soft" style="padding:6px 12px;font-size:12px" data-act="reroll">换一批</button></div><div class="reco">';
+  list.forEach(function(d){
+    h+='<div class="reco-item" data-act="detail" data-dish="'+esc(d.dish)+'">'+
+      ph(d.images,'ph')+
+      '<div class="ri"><div class="nm">'+esc(d.dish)+'</div><div class="stars">'+starStr(d.best)+'</div>'+
+      (d.lastLog?ingTags(d.lastLog.ingredients):'')+'</div></div>';
+  });
+  h+='</div>';
+  h+='<div class="card" style="margin-top:16px;display:flex;align-items:center;gap:12px">'+
+    '<div style="flex:1"><div style="font-size:14px;font-weight:600">想不出吃什么</div>'+
+    '<div style="font-size:12.5px;color:var(--ink-3);margin-top:2px">让好友从你的菜里挑</div></div>'+
+    '<button class="btn btn-soft" data-act="go" data-v="share">一起点菜</button></div>';
+  return h;
+}
+function vMine(){
+  return '<input class="search" id="search" placeholder="搜索菜名或配料，比如：鸡" value="'+esc(state.search)+'" autocomplete="off">'+
+    '<div id="mineWrap">'+mineBody()+'</div>';
+}
+function mineBody(){
+  var ds=byDish(),q=state.search.trim().toLowerCase();
+  if(q)ds=ds.filter(function(d){
+    return d.dish.toLowerCase().indexOf(q)>=0||d.ings.toLowerCase().indexOf(q)>=0;
+  });
+  var h='<div class="sec-title">我的菜 <small>'+ds.length+' 种</small></div>';
+  if(!ds.length)return h+'<div class="empty">'+UI.grid+'<p>'+(q?'没找到相关配料或菜名':'还没有记录')+'</p></div>';
+  h+='<div class="grid">';
+  ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div><div class="row"><span class="stars">'+starStr(d.best)+'</span></div></div></div>';});
+  return h+'</div>';
+}
+function vDetail(){
+  var d=state.detailDish,logs=state.logs.filter(function(l){return l.dish===d;}).sort(function(a,b){return b.date-a.date;});
+  if(!logs.length)return '<div class="empty">'+UI.grid+'<p>这道菜的记录已删除</p></div>';
+  var cur=logs[0],best=Math.max.apply(null,logs.map(function(l){return l.rating;})),imgs=imgsOf(cur);
+  var h='<button class="btn btn-soft" data-act="go" data-v="mine" style="margin-bottom:14px">← 返回我的菜</button>';
+  h+='<div class="card"><div style="font-size:24px;font-weight:700">'+esc(d)+'</div>'+
+    '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stars">'+starStr(best)+'</span>'+
+    '<span style="color:var(--ink-3);font-size:12px">记录于 '+fmtDate(cur.date)+'</span></div>'+
+    (imgs.length?'<div class="det-imgs">'+imgs.map(function(im){return '<img src="'+im+'" alt="" data-act="viewimg">';}).join('')+'</div>':'')+
+    (cur.ingredients?'<div class="sub-title">配料</div>'+ingTags(cur.ingredients):'')+
+    (cur.steps?'<div class="sub-title">做法</div><pre class="steps">'+esc(cur.steps)+'</pre>':'')+
+    '<button class="btn btn-block '+(inPicks(d)?'btn-soft':'btn-solid')+'" style="margin-top:20px'+(inPicks(d)?';color:var(--brand)':'')+'" data-act="pick" data-dish="'+esc(d)+'">'+
+      (inPicks(d)?'✓ 已在今天这顿 · 移出':'＋ 加到今天这顿')+'</button>'+
+    '<div class="hero-btns" style="margin-top:10px">'+
+      '<button class="btn btn-danger" data-act="del" data-id="'+cur.id+'">删除</button>'+
+      '<button class="btn btn-soft" data-act="edit" data-id="'+cur.id+'">编辑这道菜</button>'+
+    '</div></div>';
+  if(logs.length>1){
+    h+='<div class="sec-title">更早的记录 <small>'+(logs.length-1)+' 条</small></div><div class="tl">';
+    logs.slice(1).forEach(function(l){
+      var li=imgsOf(l);
+      h+='<div class="ev"><div class="d">'+fmtDate(l.date)+' · '+starStr(l.rating)+'</div>'+
+        (li.length?'<div class="imgs">'+li.map(function(im){return '<img src="'+im+'" alt="" data-act="viewimg">';}).join('')+'</div>':'')+
+        '<div class="ev-btns"><button class="btn btn-danger" data-act="del" data-id="'+l.id+'">删除</button><button class="btn btn-soft" data-act="edit" data-id="'+l.id+'">编辑</button></div></div>';
+    });
+    h+='</div>';
+  }
+  return h;
+}
+function vForm(){
+  var f=state.form,names={};state.logs.forEach(function(l){names[l.dish]=1;});
+  var h='<div class="card">';
+  h+='<div class="form-row"><label>菜名</label><input class="inp" id="f_dish" list="dishList" placeholder="比如：番茄炒蛋" value="'+esc(f.dish)+'"><datalist id="dishList">'+Object.keys(names).map(function(n){return '<option value="'+esc(n)+'">';}).join('')+'</datalist></div>';
+  h+='<div class="form-row"><label>这次做得怎么样</label><div class="star-pick" id="f_stars">'+[1,2,3,4,5].map(function(i){return '<span data-act="star" data-n="'+i+'" class="'+(i<=f.rating?'on':'')+'">★</span>';}).join('')+'</div></div>';
+  h+='<div class="form-row"><label>成品菜图 <span style="color:var(--ink-3);font-weight:400">（可多张，最多 9 张）</span></label><div class="photos" id="f_photos">'+
+    f.images.map(function(im,i){return '<div class="photo-item"><img src="'+im+'" alt=""><button class="rm" data-act="rmphoto" data-i="'+i+'">×</button></div>';}).join('')+
+    '<div class="photo-add" data-act="photo">+<span>添加图片</span></div></div>'+
+    '<div class="hint">可以直接拍照，也能从相册选；自动压缩到约 720px 存在本机，一张约几十 KB</div></div>';
+  h+='<div class="form-row"><label>配料 <span style="color:var(--ink-3);font-weight:400">（逗号、空格或换行分隔）</span></label><textarea class="ta" id="f_ing" placeholder="番茄、鸡蛋、葱">'+esc(f.ingredients)+'</textarea></div>';
+  h+='<div class="form-row"><label>做法步骤</label><textarea class="ta" id="f_steps" style="min-height:110px" placeholder="1. …\n2. …">'+esc(f.steps)+'</textarea></div>';
+  h+='<div class="form-row"><label>记录日期</label><input class="inp" type="date" id="f_date" value="'+f.date+'"></div>';
+  h+='<div class="hero-btns" style="margin-top:6px"><button class="btn btn-soft" data-act="go" data-v="'+state.formBack+'">取消</button><button class="btn btn-solid" data-act="save">保存这道菜</button></div>';
+  return h+'</div>';
+}
+function vReview(){
+  var logs=state.logs,ds=byDish();
+  var avg=logs.length?(logs.reduce(function(s,l){return s+l.rating;},0)/logs.length).toFixed(1):'—';
+  var five=ds.filter(function(d){return d.best>=5;}).length;
+  var h='<div class="card"><div class="sec-title" style="margin-top:0">厨房统计</div><div class="stats">'+
+    '<div class="s"><div class="v">'+ds.length+'</div><div class="k">菜品种类</div></div>'+
+    '<div class="s"><div class="v">'+avg+'</div><div class="k">平均评分</div></div>'+
+    '<div class="s"><div class="v">'+five+'</div><div class="k">五星拿手菜</div></div></div>'+
+    '<div class="hint" style="margin-top:14px;text-align:center">照片占用约 '+sizeText(photoBytes())+' · 全部存在本机</div></div>';
+  var top=ds.slice().sort(function(a,b){return b.best-a.best||b.last-a.last;}).slice(0,5);
+  h+='<div class="sec-title">我的拿手菜</div><div class="card">';
+  if(!top.length)h+='<div style="color:var(--ink-3);font-size:13px">还没有数据</div>';
+  top.forEach(function(d,i){h+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><span>'+(i+1)+'. '+esc(d.dish)+'</span><span class="stars">'+starStr(d.best)+'</span></div>';});
+  h+='</div>';
+  h+='<div class="sec-title">数据备份</div><div class="card"><div style="font-size:13px;color:var(--ink-2);margin-bottom:12px">数据只在这台设备上。换机或清缓存前记得导出。可导出<b>含图片</b>或<b>仅文字</b>两种备份。</div>'+
+    '<div class="hero-btns"><button class="btn btn-soft" data-act="import">导入备份</button><button class="btn btn-solid" data-act="export">导出含图</button></div>'+
+    '<button class="btn btn-soft btn-block" style="margin-top:10px" data-act="exportLite">仅导出文字（体积小）</button>'+
+    '<div class="hint">导出的文件存在手机「下载」目录，导入时在那里选；仅文字备份恢复后照片需重新添加</div></div>';
+  h+='<div class="sec-title">应用更新 <small>当前 '+APP_VERSION+'</small></div><div class="card">'+
+    '<div class="hint" style="margin:0 0 10px">打开 App 时会自动检查。有新版会提示你下载，菜谱数据不受影响。</div>'+
+    '<button class="btn btn-solid btn-block" data-act="checkUpdate">检查更新</button>'+
+    '<details class="adv"><summary>自定义更新地址</summary>'+
+    '<input class="inp" id="updateUrl" style="margin-top:10px" placeholder="'+esc(DEFAULT_UPDATE_URL)+'" value="'+esc(localStorage.getItem(UPDATE_URL_KEY)||'')+'">'+
+    '<div class="hint">留空即用默认地址 '+esc(DEFAULT_UPDATE_URL)+'</div>'+
+    '<button class="btn btn-soft btn-block" style="margin-top:8px" data-act="saveUpdateUrl">保存地址</button>'+
+    '</details></div>';
+  h+='<div class="sec-title">其他</div><div class="card"><button class="btn btn-danger btn-block" data-act="clearAll">清空所有记录</button><div class="hint">不可恢复，请先导出备份</div></div>';
+  return h;
+}
+
+/* ---------- 一起点菜（局域网） ---------- */
+var lan={running:false,url:'',ip:'',port:0,code:'',scope:'all',subs:[],busy:false,timer:null,err:'',check:null,checkMsg:''};
+
+function lanPlugin(){
+  try{
+    if(window.LanShareAvailable&&!window.LanShareAvailable())return null;
+    return window.LanShare||null;
+  }catch(e){return null;}
+}
+/* 复制到剪贴板：新版用 clipboard API，旧 WebView 退回 execCommand */
+function copyText(txt){
+  function legacy(){
+    try{
+      var ta=document.createElement('textarea');
+      ta.value=txt;ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();ta.setSelectionRange(0,txt.length);
+      var ok=document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){return false;}
+  }
+  return new Promise(function(res){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){res(true);},function(){res(legacy());});
+    }else res(legacy());
+  });
+}
+/* 把 720px 的成品图缩成 240px 缩略图，供好友端加载 */
+function thumbOf(src){
+  return new Promise(function(res){
+    if(!src){res('');return;}
+    var img=new Image();
+    img.onload=function(){
+      try{
+        var max=240,w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        var s=Math.min(1,max/Math.max(w,h));
+        var cv=document.createElement('canvas');
+        cv.width=Math.max(1,Math.round(w*s));cv.height=Math.max(1,Math.round(h*s));
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        var d=cv.toDataURL('image/jpeg',0.7);
+        res((d.split(',')[1]||''));
+      }catch(e){res('');}
+    };
+    img.onerror=function(){res('');};
+    img.src=src;
+  });
+}
+function shareDishes(){
+  var ds=lan.scope==='picks'?pickDishes():byDish();
+  return ds.slice(0,24);
+}
+function startShare(){
+  var P=lanPlugin();
+  if(!P){toast('当前安装包不支持这个功能');return;}
+  var ds=shareDishes();
+  if(!ds.length){toast('还没有可以分享的菜');return;}
+  if(lan.busy)return;
+  lan.busy=true;lan.err='';
+  render();
+  var tasks=ds.map(function(d){
+    var src=imgsOf(d.lastLog)[0]||d.images[0]||'';
+    return thumbOf(src).then(function(t){
+      return {name:d.dish,rating:d.best,ings:(d.ings||'').slice(0,60),thumb:t};
+    });
+  });
+  /* 好友端页面一并交给原生，热更新后也能跟着换新 */
+  var htmlP=Promise.resolve('');
+  try{
+    htmlP=fetch('lan.html',{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).catch(function(){return '';});
+  }catch(e){}
+  Promise.all([htmlP,Promise.all(tasks)]).then(function(res){
+    var guestHtml=res[0]||'', list=res[1];
+    var code=String(1000+Math.floor(Math.random()*9000));
+    return P.start({dishes:list,code:code,html:guestHtml}).then(function(r){
+      lan.running=true;
+      lan.code=r.code||code;
+      lan.ip=r.ip||'';
+      lan.port=r.port||0;
+      lan.url=r.url||'';
+      lan.subs=[];
+      lan.busy=false;
+      lan.check=null;lan.checkMsg='';
+      startPoll();
+      render();
+      if(!lan.url)toast('没连上 WiFi，好友可能打不开');
+      runSelfTest(false);
+    });
+  }).catch(function(e){
+    lan.busy=false;lan.err=(e&&e.message)||'开启失败';
+    render();
+  });
+}
+function stopShare(silent){
+  var P=lanPlugin();
+  if(P&&lan.running)P.stop().catch(function(){});
+  lan.running=false;lan.url='';lan.subs=[];lan.check=null;lan.checkMsg='';
+  stopPoll();
+  render();
+  if(!silent)toast('已结束');
+}
+/* 自己访问一次本机地址，确认服务真的起来了（排掉“服务没启动”这一类问题） */
+function runSelfTest(manual){
+  var P=lanPlugin();
+  if(!P||!lan.running)return;
+  if(!P.selfTest){if(manual)toast('当前安装包不支持自检');return;}
+  lan.check=null;lan.checkMsg='';
+  if(manual){toast('正在检查服务…');render();}
+  P.selfTest().then(function(r){
+    lan.check=!!(r&&r.ok);
+    if(!lan.check)lan.checkMsg='返回状态 '+((r&&r.status)||'?');
+    if(manual&&lan.check)toast('服务正常，可以打开试试');
+    render();
+  }).catch(function(e){
+    lan.check=false;
+    lan.checkMsg=(e&&(e.message||e.errorMessage||e))||'连接被拒绝';
+    render();
+  });
+}
+function startPoll(){
+  stopPoll();
+  lan.timer=setInterval(function(){
+    if(!lan.running)return;
+    var P=lanPlugin();if(!P)return;
+    P.getPicks().then(function(r){
+      var subs=(r&&r.submissions)||[];
+      if(JSON.stringify(subs)!==JSON.stringify(lan.subs)){
+        lan.subs=subs;
+        if(state.view==='share')render();
+      }
+    }).catch(function(){});
+  },2200);
+}
+function stopPoll(){if(lan.timer){clearInterval(lan.timer);lan.timer=null;}}
+function latestPicks(){
+  return lan.subs.length?lan.subs[lan.subs.length-1].picks:[];
+}
+function qrSvg(text){
+  try{
+    var qr=window.qrcode(0,'M');
+    qr.addData(text);qr.make();
+    return qr.createSvgTag({cellSize:4,margin:2,scalable:true});
+  }catch(e){return '';}
+}
+function vShare(){
+  var P=lanPlugin();
+  var h='<button class="btn btn-soft" data-act="go" data-v="today" style="margin-bottom:14px">← 返回首页</button>';
+
+  if(!P){
+    return h+'<div class="card"><div style="font-size:16px;font-weight:700;margin-bottom:8px">需要新版安装包</div>'+
+      '<div style="font-size:13px;color:var(--ink-2);line-height:1.8">让好友点菜要用到系统自带的网络服务，热更新改不了这一块。装一次新的安装包就能用，菜谱数据不会丢。</div></div>';
+  }
+
+  if(!lan.running){
+    var all=byDish().length,pk=pickDishes().length;
+    h+='<div class="card"><div style="font-size:16px;font-weight:700">让好友挑几道</div>'+
+      '<div style="font-size:13px;color:var(--ink-2);margin-top:6px;line-height:1.75">好友连上同一个 WiFi（或你开的热点），扫一下码，就能从你的菜里挑想吃的，点完这边立刻看到。</div>'+
+      '<div class="seg">'+
+        '<button class="'+(lan.scope==='all'?'on':'')+'" data-act="shareScope" data-s="all">全部菜 '+all+' 道</button>'+
+        '<button class="'+(lan.scope==='picks'?'on':'')+'" data-act="shareScope" data-s="picks" '+(!pk?'disabled style="opacity:.45"':'')+'>今天这顿 '+pk+' 道</button>'+
+      '</div>';
+    if(lan.err)h+='<div class="hint" style="color:var(--danger);margin-top:10px">'+esc(lan.err)+'</div>';
+    h+='<button class="btn btn-solid btn-block" style="margin-top:16px" data-act="shareStart" '+(lan.busy?'disabled':'')+'>'+(lan.busy?'正在准备…':'生成链接')+'</button></div>';
+    if(!all)h+='<div class="hint" style="text-align:center">先去记几道菜，才有东西给好友挑</div>';
+    return h;
+  }
+
+  var picks=latestPicks();
+  h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div style="font-size:15px;font-weight:700">'+(lan.url?'扫这个码点菜':'还没连上 WiFi')+'</div>'+
+      '<span class="live"><i></i>进行中</span></div>';
+  if(lan.url){
+    h+='<div class="qr-wrap">'+qrSvg(lan.url)+'</div>'+
+      '<div class="url-box"><span class="u">'+esc(lan.url)+'</span>'+
+        '<button class="cp" data-act="copyUrl" id="cpBtn">复制</button></div>'+
+      '<div class="hero-btns" style="margin-top:10px">'+
+        '<button class="btn btn-soft" data-act="recheck">重新自检</button>'+
+        '<button class="btn btn-solid" data-act="openLocal">在我手机上打开</button>'+
+      '</div>'+
+      '<div class="share-tip">让好友连同一个 WiFi 扫码，或把链接发给他<br>保持 App 开着，点「结束共选」即关闭</div>';
+  }else{
+    h+='<div class="share-warn">没拿到本机地址，好友打不开。连上同一个 WiFi（或开热点），点「结束共选」后重新生成。</div>';
+  }
+  if(lan.check===false)h+='<div class="share-warn">本机访问失败：'+esc(lan.checkMsg||'服务未就绪')+'</div>';
+  h+='<button class="btn btn-soft btn-block" style="margin-top:14px" data-act="shareStop">结束共选</button></div>';
+
+  h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between">'+
+      '<div style="font-size:15px;font-weight:700">好友点了什么</div>'+
+      '<span style="font-size:12px;color:var(--ink-3)">'+(lan.subs.length?'已收到 '+lan.subs.length+' 次':'等好友提交…')+'</span></div>';
+  if(picks.length){
+    h+='<div class="who-pick">'+picks.map(function(n){return '<span>'+esc(n)+'</span>';}).join('')+'</div>'+
+      '<button class="btn btn-solid btn-block" style="margin-top:14px" data-act="shareApply">加到今天这顿</button>';
+  }else{
+    h+='<div style="font-size:13px;color:var(--ink-3);margin-top:10px;line-height:1.75">页面会自己刷新，不用手动操作。</div>';
+  }
+  return h+'</div>';
+}
+
+/* ---------- 交互 ---------- */
+function openForm(dish,editId){
+  var base=null;
+  if(editId){base=state.logs.filter(function(l){return l.id===editId;})[0]||null;}
+  else if(dish){base=state.logs.filter(function(l){return l.dish===dish;}).sort(function(a,b){return b.date-a.date;})[0]||null;}
+  state.form={
+    id:base&&editId?base.id:uid(),
+    isNew:!editId,
+    dish:base?base.dish:(dish||''),
+    rating:base?base.rating:0,
+    images:base?imgsOf(base).slice():[],
+    ingredients:base?base.ingredients:'',
+    steps:base?base.steps:'',
+    date:base?fmtInputDate(base.date):new Date().toISOString().slice(0,10)
+  };
+  state.formBack=(editId||dish)?'detail':'mine';
+  state.view='form';render();
+}
+function collectForm(){
+  var f=state.form;
+  f.dish=document.getElementById('f_dish').value.trim();
+  f.ingredients=document.getElementById('f_ing').value.trim();
+  f.steps=document.getElementById('f_steps').value.trim();
+  f.date=document.getElementById('f_date').value;
+}
+function compress(file,cb){
+  var fr=new FileReader();
+  fr.onload=function(e){var img=new Image();img.onload=function(){
+    var w=img.width,h=img.height,max=720;
+    if(w>max||h>max){var r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}
+    var c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg',0.62));
+  };img.onerror=function(){cb(null);};img.src=e.target.result;};
+  fr.onerror=function(){cb(null);};
+  fr.readAsDataURL(file);
+}
+function doExport(withImage){
+  var logs=state.logs.map(function(l){var o={};for(var k in l)o[k]=l[k];if(!withImage){o.images=[];o.image=null;}return o;});
+  var data={app:'厨房手记',version:2,exported:new Date().toISOString(),withImage:!!withImage,logs:logs};
+  var json=JSON.stringify(data);
+  var name='厨房手记备份_'+new Date().toISOString().slice(0,10)+(withImage?'_含图':'_文字')+'.json';
+  var big=json.length>4*1024*1024;
+  /* App 里 WebView 没有下载器，a[download] 点了等于没点，必须走原生写进「下载」 */
+  var B=(window.BackupAvailable&&window.BackupAvailable())?window.Backup:null;
+  if(B&&B.saveText){
+    toast(big?'图片较多，正在保存…':'正在保存…');
+    B.saveText({name:name,content:json}).then(function(r){
+      toast('已保存到「'+(r&&r.path?r.path.replace(/\/[^/]*$/,''):'下载')+'」目录');
+    }).catch(function(e){
+      toast('保存失败：'+((e&&e.message)||'未知原因'));
+    });
+    return;
+  }
+  var blob=new Blob([json],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=name;a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+  toast(withImage?'备份已导出（含图片）':'文字备份已导出');
+}
+
+/* 保存一条菜品记录；id 传入时覆盖该条，否则新增 */
+function persistLog(id){
+  var f=state.form;if(!f)return;
+  var rec={id:id||f.id||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)),
+    dish:f.dish,rating:f.rating,images:f.images.slice(),
+    ingredients:f.ingredients,steps:f.steps,date:new Date(f.date+'T12:00:00').getTime()};
+  Store.save(rec).then(function(){
+    var found=false;state.logs=state.logs.map(function(l){if(l.id===rec.id){found=true;return rec;}return l;});
+    if(!found)state.logs.push(rec);
+    state.form=null;state.view='mine';render();toast('存好了');
+  });
+}
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-act]');if(!el)return;
+  var act=el.getAttribute('data-act');
+  if(act==='go'){
+    var dest=el.getAttribute('data-v');
+    state.search='';
+    if(dest==='form'){openForm('');}
+    else{state.view=dest;render();}
+  }
+  else if(act==='reroll'){state.batchExclude=(state.batch||[]).slice();state.batch=null;render();}
+  else if(act==='viewimg'){
+    var box=el.parentNode;
+    var list=[].slice.call(box.querySelectorAll('img')).map(function(x){return x.getAttribute('src');});
+    openViewer(list,list.indexOf(el.getAttribute('src')));
+  }
+  else if(act==='vClose'){closeViewer();}
+  else if(act==='vPrev'){moveViewer(-1);}
+  else if(act==='vNext'){moveViewer(1);}
+  else if(act==='pick'){
+    var pn=el.getAttribute('data-dish');
+    if(inPicks(pn)){removePick(pn);toast('已移出今天这顿');}
+    else{addPick(pn);toast('加到今天这顿了');}
+    render();
+  }
+  else if(act==='unpick'){
+    e.stopPropagation();removePick(el.getAttribute('data-dish'));render();toast('已移出');
+  }
+  else if(act==='clearPicks'){
+    askConfirm({title:'清空今天这顿？',desc:'只清空这份采购清单，菜谱和图片都不会删除。',okText:'清空清单',needCheck:false,danger:false},function(){
+      picks=[];savePicks();render();toast('清单已清空');
+    });
+  }
+  else if(act==='edit'){openForm(null,el.getAttribute('data-id'));}
+  else if(act==='shareStart'){startShare();}
+  else if(act==='openLocal'){
+    var P2=lanPlugin();
+    if(P2&&lan.url&&P2.openInBrowser){
+      P2.openInBrowser({url:lan.url}).catch(function(){toast('打不开，检查是否装了浏览器');});
+    }
+  }
+  else if(act==='recheck'){runSelfTest(true);}
+  else if(act==='shareStop'){stopShare();}
+  else if(act==='shareScope'){if(el.disabled)return;lan.scope=el.getAttribute('data-s');render();}
+  else if(act==='shareApply'){
+    var sel=latestPicks();
+    if(!sel.length)return;
+    var added=0;
+    sel.forEach(function(n){if(!inPicks(n)&&byDish().some(function(d){return d.dish===n;})){addPick(n);added++;}});
+    render();toast(added?'已加入 '+added+' 道':'这些已经在清单里了');
+  }
+  else if(act==='copyUrl'){
+    if(!lan.url)return;
+    var cpBtn=document.getElementById('cpBtn');
+    copyText(lan.url).then(function(ok){
+      toast(ok?'链接已复制，发给他就行':'复制失败，长按上面的地址试试');
+      if(!cpBtn)return;
+      cpBtn.textContent=ok?'已复制':'失败';
+      cpBtn.classList.toggle('done',!!ok);
+      clearTimeout(cpBtn._t);
+      cpBtn._t=setTimeout(function(){
+        cpBtn.textContent='复制';cpBtn.classList.remove('done');
+      },1800);
+    });
+  }
+  else if(act==='detail'){state.detailDish=el.getAttribute('data-dish');state.view='detail';render();}
+  else if(act==='star'){
+    var n=+el.getAttribute('data-n');state.form.rating=n;
+    var spans=document.querySelectorAll('#f_stars span');
+    for(var i=0;i<spans.length;i++)spans[i].classList.toggle('on',i<n);
+  }
+  else if(act==='photo'){document.getElementById('sheetMask').classList.add('show');}
+  else if(act==='photoCam'){closeSheet();document.getElementById('camIn').click();}
+  else if(act==='photoAlbum'){closeSheet();document.getElementById('fileIn').click();}
+  else if(act==='sheetClose'){closeSheet();}
+  else if(act==='rmphoto'){
+    e.stopPropagation();
+    if(state.view==='form')collectForm();
+    state.form.images.splice(+el.getAttribute('data-i'),1);render();
+  }
+  else if(act==='save'){
+    collectForm();var f=state.form;
+    if(!f.dish){toast('先写上菜名');return;}
+    if(!f.rating){toast('给这次打个分吧');return;}
+    if(f.isNew){
+      var dup=state.logs.filter(function(l){return l.dish===f.dish;})[0];
+      if(dup){
+        askConfirm({title:'已经有「'+f.dish+'」了',desc:'保存会用这次的内容更新原来那条，不会多出一条重复的菜。',okText:'更新',needCheck:false,danger:false},function(){persistLog(dup.id);});
+        return;
+      }
+    }
+    persistLog(f.id);
+  }
+  else if(act==='del'){
+    var id=el.getAttribute('data-id');
+    var rec=state.logs.filter(function(l){return l.id===id;})[0];
+    var same=rec?state.logs.filter(function(l){return l.dish===rec.dish;}).length:1;
+    askConfirm({
+      title:same>1?'删除这条记录？':'删除这道菜？',
+      desc:same>1?'这条记录和它的图片会一起删除。':'这道菜的做法、配料和图片都会删除。',
+      okText:'删除',needCheck:false
+    },function(){
+      Store.remove(id).then(function(){
+        state.logs=state.logs.filter(function(l){return l.id!==id;});
+        if(rec&&!state.logs.some(function(l){return l.dish===rec.dish;}))removePick(rec.dish);
+        if(!state.logs.some(function(l){return l.dish===state.detailDish;}))state.view='mine';
+        render();toast('已删除');
+      });
+    });
+  }
+  else if(act==='export'){doExport(true);}
+  else if(act==='exportLite'){doExport(false);}
+  else if(act==='import'){document.getElementById('jsonIn').click();}
+  else if(act==='saveUpdateUrl'){
+    var uv=document.getElementById('updateUrl').value.trim().replace(/\/+$/,'');
+    localStorage.setItem(UPDATE_URL_KEY,uv);
+    toast(uv?'更新地址已保存':'已恢复默认更新地址');
+  }
+  else if(act==='checkUpdate'){checkUpdate(true);}
+  else if(act==='clearAll'){
+    askConfirm({
+      title:'清空全部记录？',
+      desc:'将删除所有菜品、做法和图片。清空后无法找回。',
+      warn:'建议先在上方导出一份备份。目前共 '+state.logs.length+' 条记录。',
+      checkLabel:'我已备份或不再需要这些记录，确认清空',
+      okText:'确认清空'
+    },function(){
+      Store.clear().then(function(){state.logs=[];picks=[];savePicks();state.view='today';render();toast('已清空');});
+    });
+  }
+  else if(act==='cfCancel'){closeConfirm();}
+  else if(act==='cfOk'){
+    if(document.getElementById('cfOk').disabled)return;
+    var cb=confirmCb;closeConfirm();if(cb)cb();
+  }
+});
+document.getElementById('fileIn').addEventListener('change',function(e){
+  var files=Array.prototype.slice.call(e.target.files||[]);
+  e.target.value='';
+  addPhotos(files);
+});
+document.getElementById('camIn').addEventListener('change',function(e){
+  var files=Array.prototype.slice.call(e.target.files||[]);
+  e.target.value='';
+  addPhotos(files);
+});
+function addPhotos(files){
+  if(!files||!files.length)return;
+  if(state.view!=='form'||!state.form)return;
+  collectForm();
+  var room=Math.max(0,9-state.form.images.length);
+  if(!room){toast('最多 9 张图片');return;}
+  var picked=files.slice(0,room),done=0,added=0;
+  toast('正在处理图片…');
+  picked.forEach(function(file){
+    compress(file,function(data){
+      if(data&&state.form&&state.form.images.length<9){state.form.images.push(data);added++;}
+      done++;
+      if(done===picked.length){render();toast(added?'已添加 '+added+' 张图片':'图片处理失败');}
+    });
+  });
+}
+document.getElementById('jsonIn').addEventListener('change',function(e){
+  var file=e.target.files[0];if(!file)return;
+  var fr=new FileReader();
+  fr.onload=function(ev){
+    try{
+      var d=JSON.parse(ev.target.result);
+      if(!d||!Array.isArray(d.logs))throw 0;
+      var ids={};state.logs.forEach(function(l){ids[l.id]=1;});
+      var n=0,tasks=[];
+      d.logs.forEach(function(l){
+        if(!ids[l.id]&&l.dish){
+          var o={};for(var k in l)o[k]=l[k];
+          o.images=imgsOf(l);
+          state.logs.push(o);tasks.push(Store.save(o));n++;
+        }
+      });
+      Promise.all(tasks).then(function(){render();toast(n?('导入了 '+n+' 条记录'):'没有新记录');});
+    }catch(err){toast('文件格式不对，导入失败');}
+  };
+  fr.readAsText(file);e.target.value='';
+});
+
+var composing=false;
+app.addEventListener('compositionstart',function(e){if(e.target.id==='search')composing=true;});
+app.addEventListener('compositionend',function(e){
+  if(e.target.id==='search'){composing=false;state.search=e.target.value;refreshMine();}
+});
+function refreshMine(){var w=document.getElementById('mineWrap');if(w)w.innerHTML=mineBody();}
+app.addEventListener('input',function(e){
+  if(e.target.id==='search'){
+    state.search=e.target.value;
+    if(!composing)refreshMine();
+    return;
+  }
+  if(state.view==='form'&&state.form){
+    if(e.target.id==='f_dish')state.form.dish=e.target.value;
+    else if(e.target.id==='f_ing')state.form.ingredients=e.target.value;
+    else if(e.target.id==='f_steps')state.form.steps=e.target.value;
+    else if(e.target.id==='f_date')state.form.date=e.target.value;
+  }
+});
+
+Store.open().then(function(){return Store.getAll();}).then(function(logs){state.logs=logs||[];render();});
+notifyReady();
+setTimeout(function(){if(isNative())checkUpdate(false);},2500);
+})();
+</script>
+</body>
+</html>

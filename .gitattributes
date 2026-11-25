@@ -1,0 +1,11 @@
+* text=auto
+
+# Gradle 包装脚本必须保持 LF，否则在 Linux/macOS 上无法执行
+gradlew text eol=lf
+*.sh text eol=lf
+
+# 二进制资源不做换行转换
+*.png binary
+*.jpg binary
+*.jar binary
+*.apk binary

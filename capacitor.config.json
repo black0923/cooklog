@@ -1,0 +1,10 @@
+{
+  "appId": "com.cooklog.kitchen",
+  "appName": "厨房手记",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false
+    }
+  }
+}

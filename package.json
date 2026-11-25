@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@capacitor/core": "^8.6.2",
+    "@capgo/capacitor-updater": "^8.54.2",
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "archiver": "^7.0.1",
+    "esbuild": "^0.28.2"
+  }
+}
