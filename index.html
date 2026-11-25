@@ -259,7 +259,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.2';
+var APP_VERSION='1.2.3';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -289,6 +289,15 @@ function updErr(e){
   if(/version|downgrade/i.test(m))return '版本信息不对，请稍后再试';
   return m?m.slice(0,60):'未知原因';
 }
+/* 版本比较：a 比 b 新返回 >0，相同 0，更旧 <0（忽略预发布后缀） */
+function cmpVer(a,b){
+  var pa=String(a||'0').split('.'),pb=String(b||'0').split('.');
+  for(var i=0;i<3;i++){
+    var x=parseInt(pa[i],10)||0,y=parseInt(pb[i],10)||0;
+    if(x!==y)return x-y;
+  }
+  return 0;
+}
 function checkUpdate(manual){
   var u=updaterApi();
   if(!u){if(manual)toast('请在 App 内使用更新功能');return;}
@@ -297,7 +306,9 @@ function checkUpdate(manual){
   if(manual)toast('正在检查更新…');
   fetch(base+'/update.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(info){
     if(!info||!info.version){if(manual)toast('更新配置无效');return;}
-    if(info.version===APP_VERSION){if(manual)toast('已是最新版本 '+APP_VERSION);return;}
+    var cmp=cmpVer(info.version,APP_VERSION);
+    if(cmp===0){if(manual)toast('已是最新版本 '+APP_VERSION);return;}
+    if(cmp<0){if(manual)toast('当前版本 '+APP_VERSION+' 已是最新');return;}
     var zurl=info.zip||(base+'/'+(info.file||('cooklog-'+info.version+'.zip')));
     /* 插件 8.x 的原生下载会先查校验值，缺了在发请求前就被拒（Checksum required） */
     var sum=(info.sha256||info.checksum||'').trim();

@@ -120,6 +120,7 @@ node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.
 9. **好友端页面由网页传给原生。** 原生不再硬读 APK 里的 `lan.html`，所以以后改好友端界面能跟着热更走。
 10. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
 11. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
+12. **Android 9+ 默认禁止明文 HTTP。** 局域网共选的自检走 `HttpURLConnection` 访问 `http://127.0.0.1`，没有 `network_security_config.xml` 就会报 `Cleartext HTTP traffic to 127.0.0.1 not permitted`。现在 `res/xml/network_security_config.xml` 只对 `127.0.0.1` / `localhost` 放开，其余仍禁止。
 
 ## 数据
 

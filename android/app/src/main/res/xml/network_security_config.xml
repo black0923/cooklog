@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  局域网共选要在本机起一个 http 服务，自检与好友端页面都是明文 HTTP。
+  Android 9+ 默认禁止明文，这里只对本机地址开口子，其余仍按系统默认（禁止）处理。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
