@@ -15,8 +15,8 @@
 - **今天这顿**：详情页一键加入采购清单，首页把各菜的配料**去重合并**成一张采购单，买完一键清空
 - **一起点菜**：局域网点菜。App 在本机起一个只读小服务，显示 4 位访问码和二维码；同一 WiFi（或你的热点）下好友扫码就能看到你的菜、看图、勾选提交，结果自动回到你手机，可一键加进采购清单
 - **备份**：导出 JSON 到系统「下载」目录，导入时从那里选
-- **AI 识别配料**：做法步骤写完后离开输入框，自动识别食材并回填到下方的配料框；用智谱 `glm-4-flash`（免费），只补不删，手填的内容会保留。走自己域名的代理，纯网页改动即可热更，不用为新功能重装 APK
-- **热更新**：网页层改动可通过更新包下发，不用重装
+- **AI 识别配料**：做法步骤写完后离开输入框，自动识别食材并回填到下方的配料框；用智谱 `glm-4-flash`（免费），只补不删，手填的内容会保留。识别走 APK 内置原生模块直连智谱，**不依赖自建服务器**
+- **热更新**：网页层改动可通过更新包下发，不用重装；更新地址可自定义，临时托管到期后 App 其余功能照常用
 
 ## 技术栈
 
@@ -47,10 +47,10 @@ scripts/
 
 android/
   app/src/main/java/com/cooklog/kitchen/
-    MainActivity.java   注册两个原生插件
+    MainActivity.java   注册三个原生插件
     LanSharePlugin.java 局域网服务（菜品/图片 HTTP 接口、收好友提交）
     BackupPlugin.java   备份写入系统下载目录、读取用户选的文件
-    AiPlugin.java       调智谱接口从步骤里提取配料的原生兜底（代理不可用时才走）
+    AiPlugin.java       调智谱接口从步骤里提取配料（唯一通道，不依赖自建服务器）
   app/src/main/res/     图标与启动图
 
 www/                    构建产物（webDir），由脚本生成，不进仓库
@@ -99,7 +99,7 @@ node scripts/build-apk.js     # 产出根目录的「厨房手记.apk」（debug
 node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.json
 ```
 
-把这两个文件传到任意静态托管目录即可。App 里的默认更新地址是 `DEFAULT_UPDATE_URL`（`index.html` 顶部），指向 `https://ncbky.xyz/cooklog`；想换托管在「回顾 → 应用更新 → 自定义更新地址」里改。
+把这两个文件传到任意静态托管目录即可。App 里的默认更新地址是 `DEFAULT_UPDATE_URL`（`index.html` 顶部），目前临时指向 `https://ncbky.xyz/cooklog`，只用于近期热更调试；这个托管到期后，在「回顾 → 应用更新 → 自定义更新地址」里改成新地址即可。自动检查失败时不会打扰你，手动检查会给明确提示；App 的菜谱数据、图片、局域网共选、AI 识别都不依赖这个服务器。
 
 `update.json` 结构就三个字段，`sha256` 必须是 zip 的 SHA-256 小写十六进制：
 
@@ -123,7 +123,7 @@ node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.
 10. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
 11. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
 12. **Android 9+ 默认禁止明文 HTTP。** 局域网共选的自检走 `HttpURLConnection` 访问 `http://127.0.0.1`，没有 `network_security_config.xml` 就会报 `Cleartext HTTP traffic to 127.0.0.1 not permitted`。现在 `res/xml/network_security_config.xml` 只对 `127.0.0.1` / `localhost` 放开，其余仍禁止。
-13. **AI 走域名代理，不必为每个新功能重装 APK。** 智谱接口没有 CORS 头，WebView 直连会被拦；现在由 `ncbky.xyz/cooklog/ai/chat/completions` 反向代理到智谱并注入 Key，网页层直接 `fetch` 即可，所以这类改动靠热更就能生效。服务器 Caddy 配置里存了 Key；本机仍可用 `ai-key.local` 注入 APK 作为兜底（两个文件都在 `.gitignore` 里）。只有「自动识别配料」这一步需要联网，其余功能仍然纯离线。
+13. **AI 不依赖自建服务器。** 智谱接口没有 CORS 头，WebView 直连会被拦，所以由 APK 内的 `AiPlugin` 用 Java 发请求直连智谱，Key 由本机 `ai-key.local` 在构建时注入（该文件与生成的 `AiKey.java` 都在 `.gitignore` 里，不进 GitHub、不进热更 zip）。之前在 `ncbky.xyz` 上加过的 `/cooklog/ai` 反向代理只是短期调试，现已移除；服务器到期后，菜谱数据、局域网共选、AI 识别都不受影响，只有「检查更新」需要换托管地址。只有「自动识别配料」这一步需要联网，其余功能仍然纯离线。
 
 ## 数据
 
