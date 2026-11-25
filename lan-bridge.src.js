@@ -5,6 +5,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 window.LanShare = registerPlugin('LanShare');
 window.Backup = registerPlugin('Backup');
 window.Ai = registerPlugin('Ai');
+window.Tts = registerPlugin('Tts');
 
 function hasPlugin(name) {
   try {
@@ -29,4 +30,7 @@ window.BackupAvailable = function () {
 };
 window.AiAvailable = function () {
   return hasPlugin('Ai');
+};
+window.TtsAvailable = function () {
+  return hasPlugin('Tts');
 };

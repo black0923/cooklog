@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LanSharePlugin.class);
         registerPlugin(BackupPlugin.class);
         registerPlugin(AiPlugin.class);
+        registerPlugin(TtsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

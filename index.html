@@ -164,8 +164,11 @@
   .steps .sl{border-radius:6px;padding:0 4px;margin:0 -4px}
   .steps .sl.on{background:var(--brand-soft);color:var(--brand);font-weight:600}
   .speak-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .speak-ctrls{display:flex;gap:6px}
+  .speak-ctrls{display:flex;gap:6px;align-items:center}
   .btn-mini{padding:6px 11px;font-size:12px;border-radius:9px}
+  .icon-btn{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:9px}
+  .icon-btn svg{width:17px;height:17px}
+  .rate-mini{font-size:11px;color:var(--ink-3);min-width:22px;text-align:center}
   .sub-title{font-size:13px;font-weight:600;color:var(--ink-2);margin:16px 0 8px}
   .ingline{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
   .ingline .ii{display:inline-flex;align-items:center;gap:2px;background:var(--surface-2);border-radius:14px;padding:3px 9px 3px 5px;font-size:12px;color:var(--ink-2)}
@@ -265,7 +268,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.11';
+var APP_VERSION='1.2.12';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -516,7 +519,10 @@ var UI={
   plate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
   grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
   add:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
-  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  speak:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>',
+  stopSpeak:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  speed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-6"/></svg>'
 };
 function ph(imgs,cls){
   var a=imgs||[];
@@ -582,11 +588,7 @@ function sizeText(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b
 var app=document.getElementById('app');
 var VIEWS={today:vToday,mine:vMine,detail:vDetail,form:vForm,review:vReview,share:vShare};
 function render(){
-  if(speak.playing&&state.view!=='detail'){
-    speak.playing=false;
-    if(speak.keep){clearInterval(speak.keep);speak.keep=null;}
-    try{window.speechSynthesis.cancel();}catch(e){}
-  }
+  if(speak.playing&&state.view!=='detail')speakStop();
   app.innerHTML=(VIEWS[state.view]||vToday)();
   renderTabs();
   document.getElementById('topSub').textContent=state.logs.length?byDish().length+' 道菜':'开始记第一道菜';
@@ -648,18 +650,28 @@ function mineBody(){
   ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div><div class="row"><span class="stars">'+starStr(d.best)+'</span></div></div></div>';});
   return h+'</div>';
 }
-/* ---------- 步骤朗读（浏览器语音合成，逐条高亮） ---------- */
+/* ---------- 步骤朗读（原生 TextToSpeech 优先，浏览器兜底，逐条高亮） ---------- */
 var SPEAK_RATES=[{n:'慢',v:0.8},{n:'正常',v:1},{n:'快',v:1.2}];
-var speak={playing:false,lines:[],idx:0,rateIdx:0,keep:null};
-function speakOK(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance);}
+var speak={playing:false,lines:[],idx:0,rateIdx:0,keep:null,seq:0};
+function ttsPlugin(){
+  try{
+    if(window.TtsAvailable&&!window.TtsAvailable())return null;
+    return window.Tts||null;
+  }catch(e){return null;}
+}
+function speakOK(){return !!ttsPlugin()||!!(window.speechSynthesis&&window.SpeechSynthesisUtterance);}
 function stepsBlock(text){
   var lines=String(text||'').split(/\n/).filter(function(s){return !!s.trim();});
   var body=lines.map(function(s,i){return '<div class="sl" data-i="'+i+'">'+esc(s)+'</div>';}).join('');
-  var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+
-    '<button class="btn btn-soft btn-mini" data-act="speakRate">语速 '+SPEAK_RATES[speak.rateIdx].n+'</button>'+
-    (speakOK()?'<button class="btn btn-solid btn-mini" data-act="speak">'+(speak.playing?'停止朗读':'朗读步骤')+'</button>':'')+
-    '</span></div>';
+  var rateBtn='<button class="btn btn-soft icon-btn" data-act="speakRate" title="切换语速">'+UI.speed+'</button>'+
+    '<span class="rate-mini" data-role="rateLabel">'+SPEAK_RATES[speak.rateIdx].n+'</span>';
+  var speakBtn=speakOK()?'<button class="btn btn-solid icon-btn" data-act="speak" title="'+(speak.playing?'停止朗读':'朗读步骤')+'">'+(speak.playing?UI.stopSpeak:UI.speak)+'</button>':'';
+  var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+rateBtn+speakBtn+'</span></div>';
   return ctrl+'<div class="steps" id="stepsBox">'+body+'</div>';
+}
+function speakRefreshBtn(){
+  var b=document.querySelector('[data-act="speak"]');
+  if(b){b.innerHTML=speak.playing?UI.stopSpeak:UI.speak;b.title=speak.playing?'停止朗读':'朗读步骤';}
 }
 function speakRows(){var box=document.getElementById('stepsBox');return box?[].slice.call(box.querySelectorAll('.sl')):[];}
 function speakHighlight(){
@@ -667,50 +679,64 @@ function speakHighlight(){
   for(var i=0;i<rows.length;i++)rows[i].classList.toggle('on',speak.playing&&i===speak.idx);
 }
 function speakStop(){
-  speak.playing=false;speak.idx=0;
+  var P=ttsPlugin();
+  if(P){try{P.stop();}catch(e){}}
+  speak.playing=false;speak.idx=0;speak.seq++;
   if(speak.keep){clearInterval(speak.keep);speak.keep=null;}
   try{window.speechSynthesis.cancel();}catch(e){}
-  speakHighlight();
-  var bs=document.querySelectorAll('[data-act="speak"]');
-  for(var i=0;i<bs.length;i++)bs[i].textContent='朗读步骤';
+  speakHighlight();speakRefreshBtn();
+}
+function speakAdvance(seq){
+  if(!speak.playing||seq!==speak.seq)return;
+  speak.idx++;speakNext();
+}
+function speakFail(seq,msg){
+  if(!speak.playing||seq!==speak.seq)return;
+  if(msg==='interrupted')return;
+  speakStop();toast('朗读失败：'+msg);
 }
 function speakNext(){
   if(!speak.playing)return;
-  var rows=speakRows();
+  var seq=speak.seq,rows=speakRows();
   if(speak.idx>=rows.length){speakStop();return;}
   speakHighlight();
   var text=rows[speak.idx].textContent.replace(/^\s*\d+\s*[.、)]\s*/,'').trim();
   if(!text){speak.idx++;speakNext();return;}
-  var u=new SpeechSynthesisUtterance(text);
-  u.lang='zh-CN';u.rate=SPEAK_RATES[speak.rateIdx].v;u.pitch=1;
+  var rate=SPEAK_RATES[speak.rateIdx].v,P=ttsPlugin();
+  if(P){
+    P.speak({text:text,rate:rate}).then(function(){speakAdvance(seq);}).catch(function(e){
+      speakFail(seq,(e&&e.message)||String(e||'朗读失败'));
+    });
+    return;
+  }
+  /* 浏览器兜底：多数 WebView 没有 speechSynthesis，这里通常走不到 */
   try{
+    var u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-CN';u.rate=rate;u.pitch=1;
     var vs=window.speechSynthesis.getVoices()||[],v=null;
     for(var i=0;i<vs.length;i++){if(/^zh/i.test(vs[i].lang||'')){v=vs[i];break;}}
     if(v)u.voice=v;
-  }catch(e){}
-  u.onend=function(){if(!speak.playing)return;speak.idx++;speakNext();};
-  u.onerror=function(ev){
-    if(!speak.playing)return;
-    /* interrupted 是 cancel() 自己触发的，属正常停止，不提示 */
-    if(ev&&ev.error==='interrupted')return;
-    speakStop();
-    toast('朗读中断，请检查系统语音包');
-  };
-  try{window.speechSynthesis.speak(u);}catch(e){speakStop();toast('朗读启动失败');}
+    u.onend=function(){speakAdvance(seq);};
+    u.onerror=function(ev){speakFail(seq,(ev&&ev.error==='interrupted')?'interrupted':'朗读中断，请检查系统语音包');};
+    window.speechSynthesis.speak(u);
+  }catch(e){speakFail(seq,'朗读启动失败');}
 }
 function speakStart(){
   if(!speakOK()){toast('这个浏览器不支持语音朗读');return;}
   var rows=speakRows();
   if(!rows.length){toast('这道菜还没写做法');return;}
-  try{window.speechSynthesis.cancel();}catch(e){}
-  speak.playing=true;speak.idx=0;
-  var bs=document.querySelectorAll('[data-act="speak"]');
-  for(var i=0;i<bs.length;i++)bs[i].textContent='停止朗读';
-  /* 长按朗读时 WebView 会自己暂停，定期 pause/resume 保活 */
-  speak.keep=setInterval(function(){
-    if(!speak.playing)return;
-    try{window.speechSynthesis.pause();window.speechSynthesis.resume();}catch(e){}
-  },5000);
+  var P=ttsPlugin();
+  if(P){try{P.stop();}catch(e){}}
+  else{try{window.speechSynthesis.cancel();}catch(e){}}
+  speak.playing=true;speak.idx=0;speak.seq++;
+  speakRefreshBtn();
+  /* 浏览器兜底时 WebView 长按会暂停，需要定时 pause/resume 保活；原生模式不需要 */
+  if(!P){
+    speak.keep=setInterval(function(){
+      if(!speak.playing)return;
+      try{window.speechSynthesis.pause();window.speechSynthesis.resume();}catch(e){}
+    },5000);
+  }
   speakNext();
 }
 function vDetail(){
@@ -1176,7 +1202,7 @@ document.addEventListener('click',function(e){
   else if(act==='speakRate'){
     speak.rateIdx=(speak.rateIdx+1)%SPEAK_RATES.length;
     var nr=SPEAK_RATES[speak.rateIdx];
-    var rb=document.querySelector('[data-act="speakRate"]');if(rb)rb.textContent='语速 '+nr.n;
+    var lbl=document.querySelector('[data-role="rateLabel"]');if(lbl)lbl.textContent=nr.n;
     toast('语速：'+nr.n);
   }
   else if(act==='star'){
