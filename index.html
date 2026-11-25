@@ -161,6 +161,11 @@
   .reco-item .ingline .ii{font-size:11px;padding:2px 7px 2px 4px}
   .reco-item .ingline .ii svg{width:14px;height:14px}
   .steps{white-space:pre-wrap;font-family:inherit;font-size:13.5px;line-height:1.75;background:var(--surface-2);padding:12px 14px;border-radius:12px;margin:0;color:var(--ink-2)}
+  .steps .sl{border-radius:6px;padding:0 4px;margin:0 -4px}
+  .steps .sl.on{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .speak-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .speak-ctrls{display:flex;gap:6px}
+  .btn-mini{padding:6px 11px;font-size:12px;border-radius:9px}
   .sub-title{font-size:13px;font-weight:600;color:var(--ink-2);margin:16px 0 8px}
   .ingline{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
   .ingline .ii{display:inline-flex;align-items:center;gap:2px;background:var(--surface-2);border-radius:14px;padding:3px 9px 3px 5px;font-size:12px;color:var(--ink-2)}
@@ -260,7 +265,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.9';
+var APP_VERSION='1.2.10';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -577,6 +582,11 @@ function sizeText(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b
 var app=document.getElementById('app');
 var VIEWS={today:vToday,mine:vMine,detail:vDetail,form:vForm,review:vReview,share:vShare};
 function render(){
+  if(speak.playing&&state.view!=='detail'){
+    speak.playing=false;
+    if(speak.keep){clearInterval(speak.keep);speak.keep=null;}
+    try{window.speechSynthesis.cancel();}catch(e){}
+  }
   app.innerHTML=(VIEWS[state.view]||vToday)();
   renderTabs();
   document.getElementById('topSub').textContent=state.logs.length?byDish().length+' 道菜':'开始记第一道菜';
@@ -638,6 +648,65 @@ function mineBody(){
   ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div><div class="row"><span class="stars">'+starStr(d.best)+'</span></div></div></div>';});
   return h+'</div>';
 }
+/* ---------- 步骤朗读（浏览器语音合成，逐条高亮） ---------- */
+var SPEAK_RATES=[{n:'慢',v:0.8},{n:'正常',v:1},{n:'快',v:1.2}];
+var speak={playing:false,lines:[],idx:0,rateIdx:0,keep:null};
+function speakOK(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance);}
+function stepsBlock(text){
+  var lines=String(text||'').split(/\n/).filter(function(s){return !!s.trim();});
+  var body=lines.map(function(s,i){return '<div class="sl" data-i="'+i+'">'+esc(s)+'</div>';}).join('');
+  var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+
+    '<button class="btn btn-soft btn-mini" data-act="speakRate">语速 '+SPEECH_RATES[speak.rateIdx].n+'</button>'+
+    (speakOK()?'<button class="btn btn-solid btn-mini" data-act="speak">'+(speak.playing?'停止朗读':'朗读步骤')+'</button>':'')+
+    '</span></div>';
+  return ctrl+'<div class="steps" id="stepsBox">'+body+'</div>';
+}
+function speakRows(){var box=document.getElementById('stepsBox');return box?[].slice.call(box.querySelectorAll('.sl')):[];}
+function speakHighlight(){
+  var rows=speakRows();
+  for(var i=0;i<rows.length;i++)rows[i].classList.toggle('on',speak.playing&&i===speak.idx);
+}
+function speakStop(){
+  speak.playing=false;speak.idx=0;
+  if(speak.keep){clearInterval(speak.keep);speak.keep=null;}
+  try{window.speechSynthesis.cancel();}catch(e){}
+  speakHighlight();
+  var bs=document.querySelectorAll('[data-act="speak"]');
+  for(var i=0;i<bs.length;i++)bs[i].textContent='朗读步骤';
+}
+function speakNext(){
+  if(!speak.playing)return;
+  var rows=speakRows();
+  if(speak.idx>=rows.length){speakStop();return;}
+  speakHighlight();
+  var text=rows[speak.idx].textContent.replace(/^\s*\d+\s*[.、)]\s*/,'').trim();
+  if(!text){speak.idx++;speakNext();return;}
+  var u=new SpeechSynthesisUtterance(text);
+  u.lang='zh-CN';u.rate=SPEECH_RATES[speak.rateIdx].v;u.pitch=1;
+  try{
+    var vs=window.speechSynthesis.getVoices()||[],v=null;
+    for(var i=0;i<vs.length;i++){if(/^zh/i.test(vs[i].lang||'')){v=vs[i];break;}}
+    if(v)u.voice=v;
+  }catch(e){}
+  u.onend=function(){if(!speak.playing)return;speak.idx++;speakNext();};
+  u.onerror=function(){if(!speak.playing)return;speakStop();toast('朗读被系统中断');};
+  try{window.speechSynthesis.speak(u);}catch(e){speakStop();toast('朗读启动失败');}
+}
+function speakStart(){
+  if(!speakOK()){toast('这个浏览器不支持语音朗读');return;}
+  var rows=speakRows();
+  if(!rows.length){toast('这道菜还没写做法');return;}
+  try{window.speechSynthesis.cancel();}catch(e){}
+  speak.playing=true;speak.idx=0;
+  var bs=document.querySelectorAll('[data-act="speak"]');
+  for(var i=0;i<bs.length;i++)bs[i].textContent='停止朗读';
+  /* 长按朗读时 WebView 会自己暂停，定期 pause/resume 保活 */
+  speak.keep=setInterval(function(){
+    if(!speak.playing)return;
+    try{window.speechSynthesis.pause();window.speechSynthesis.resume();}catch(e){}
+  },5000);
+  speakNext();
+}
 function vDetail(){
   var d=state.detailDish,logs=state.logs.filter(function(l){return l.dish===d;}).sort(function(a,b){return b.date-a.date;});
   if(!logs.length)return '<div class="empty">'+UI.grid+'<p>这道菜的记录已删除</p></div>';
@@ -648,7 +717,7 @@ function vDetail(){
     '<span style="color:var(--ink-3);font-size:12px">记录于 '+fmtDate(cur.date)+'</span></div>'+
     (imgs.length?'<div class="det-imgs">'+imgs.map(function(im){return '<img src="'+im+'" alt="" data-act="viewimg">';}).join('')+'</div>':'')+
     (cur.ingredients?'<div class="sub-title">配料</div>'+ingTags(cur.ingredients):'')+
-    (cur.steps?'<div class="sub-title">做法</div><pre class="steps">'+esc(cur.steps)+'</pre>':'')+
+    (cur.steps?stepsBlock(cur.steps):'')+
     '<button class="btn btn-block '+(inPicks(d)?'btn-soft':'btn-solid')+'" style="margin-top:20px'+(inPicks(d)?';color:var(--brand)':'')+'" data-act="pick" data-dish="'+esc(d)+'">'+
       (inPicks(d)?'✓ 已在今天这顿 · 移出':'＋ 加到今天这顿')+'</button>'+
     '<div class="hero-btns" style="margin-top:10px">'+
@@ -1035,6 +1104,7 @@ document.addEventListener('click',function(e){
   var el=e.target.closest('[data-act]');if(!el)return;
   var act=el.getAttribute('data-act');
   if(act==='go'){
+    if(speak.playing)speakStop();
     var dest=el.getAttribute('data-v');
     state.search='';
     if(dest==='form'){openForm('');}
@@ -1095,7 +1165,14 @@ document.addEventListener('click',function(e){
       },1800);
     });
   }
-  else if(act==='detail'){state.detailDish=el.getAttribute('data-dish');state.view='detail';render();}
+  else if(act==='detail'){if(speak.playing)speakStop();state.detailDish=el.getAttribute('data-dish');state.view='detail';render();}
+  else if(act==='speak'){if(speak.playing)speakStop();else speakStart();}
+  else if(act==='speakRate'){
+    speak.rateIdx=(speak.rateIdx+1)%SPEECH_RATES.length;
+    var nr=SPEECH_RATES[speak.rateIdx];
+    var rb=document.querySelector('[data-act="speakRate"]');if(rb)rb.textContent='语速 '+nr.n;
+    toast('语速：'+nr.n);
+  }
   else if(act==='star'){
     var n=+el.getAttribute('data-n');state.form.rating=n;
     var spans=document.querySelectorAll('#f_stars span');
