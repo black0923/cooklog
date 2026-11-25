@@ -260,7 +260,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.7';
+var APP_VERSION='1.2.8';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -715,6 +715,7 @@ function vReview(){
 /* ---------- 一起点菜（局域网） ---------- */
 var lan={running:false,url:'',ip:'',port:0,code:'',scope:'all',subs:[],busy:false,timer:null,err:'',check:null,checkMsg:''};
 var aiBusy=false,aiLastText='';
+var AI_SYSTEM='你是菜谱助手。从做菜步骤中提取用到的食材名称，只输出一个 JSON 数组，元素是食材中文名。不要带数量、单位、动作、厨具、口味词；重复的只留一个；没有食材就输出 []。示例：输入「洋葱切丝，鸡肉切块，加盐和生抽炒熟」输出 ["洋葱","鸡肉","盐","生抽"]';
 
 function lanPlugin(){
   try{
@@ -729,17 +730,41 @@ function aiPlugin(){
     return window.Ai||null;
   }catch(e){return null;}
 }
+function aiParseItems(content){
+  var s=String(content||'').trim(),a=s.indexOf('['),b=s.lastIndexOf(']');
+  if(a<0||b<=a)return [];
+  try{var arr=JSON.parse(s.substring(a,b+1));return Array.isArray(arr)?arr:[];}catch(e){return [];}
+}
+function aiExtract(text){
+  var body=JSON.stringify({
+    model:'glm-4-flash',
+    messages:[{role:'system',content:AI_SYSTEM},{role:'user',content:text}],
+    temperature:0.1,max_tokens:300,stream:false
+  });
+  var url=String(DEFAULT_UPDATE_URL||'').replace(/\/$/,'')+'/ai/chat/completions';
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body}).then(function(r){
+    if(!r.ok)throw new Error('服务返回 '+r.status);
+    return r.json();
+  }).then(function(d){
+    var c=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+    var items=aiParseItems(c);
+    if(!items.length)throw new Error('没解析出配料');
+    return {items:items};
+  }).catch(function(e){
+    var P=aiPlugin();
+    if(P)return P.extractIngredients({text:text});
+    throw e;
+  });
+}
 function autoFillIngredients(){
   var stepsEl=document.getElementById('f_steps');
   if(!stepsEl||state.view!=='form'||!state.form)return;
   var text=stepsEl.value.trim();
   if(text.length<4||text===aiLastText)return;
-  var P=aiPlugin();
-  if(!P)return;
   aiLastText=text;
   if(aiBusy)return;
   aiBusy=true;
-  P.extractIngredients({text:text}).then(function(r){
+  aiExtract(text).then(function(r){
     var items=(r&&r.items)||[];
     if(!items.length)return;
     if(stepsEl.value.trim()!==text)return;
