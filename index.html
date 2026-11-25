@@ -267,7 +267,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.13';
+var APP_VERSION='1.2.14';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -650,9 +650,7 @@ function mineBody(){
 }
 /* ---------- 步骤朗读（原生 TextToSpeech 优先，浏览器兜底，逐条高亮） ---------- */
 var SPEAK_RATES=[{n:'慢',v:0.8},{n:'正常',v:1},{n:'快',v:1.2}];
-/* 音色靠音调 pitch 模拟：萝莉偏高、御姐偏低；真实发音仍取决于系统语音包 */
-var SPEAK_TONES=[{n:'原声',p:1},{n:'萝莉',p:1.6},{n:'御姐',p:0.75}];
-var speak={playing:false,lines:[],idx:0,rateIdx:0,toneIdx:0,keep:null,seq:0};
+var speak={playing:false,lines:[],idx:0,rateIdx:0,keep:null,seq:0};
 function ttsPlugin(){
   try{
     if(window.TtsAvailable&&!window.TtsAvailable())return null;
@@ -664,9 +662,8 @@ function stepsBlock(text){
   var lines=String(text||'').split(/\n/).filter(function(s){return !!s.trim();});
   var body=lines.map(function(s,i){return '<div class="sl" data-i="'+i+'">'+esc(s)+'</div>';}).join('');
   var rateBtn='<button class="btn btn-soft btn-mini" data-act="speakRate" title="切换语速">'+SPEAK_RATES[speak.rateIdx].n+'</button>';
-  var toneBtn='<button class="btn btn-soft btn-mini" data-act="speakTone" title="切换音色">'+SPEAK_TONES[speak.toneIdx].n+'</button>';
   var speakBtn=speakOK()?'<button class="btn btn-solid icon-btn" data-act="speak" title="'+(speak.playing?'停止朗读':'朗读步骤')+'">'+(speak.playing?UI.stopSpeak:UI.speak)+'</button>':'';
-  var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+rateBtn+toneBtn+speakBtn+'</span></div>';
+  var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+rateBtn+speakBtn+'</span></div>';
   return ctrl+'<div class="steps" id="stepsBox">'+body+'</div>';
 }
 function speakRefreshBtn(){
@@ -702,9 +699,9 @@ function speakNext(){
   speakHighlight();
   var text=rows[speak.idx].textContent.replace(/^\s*\d+\s*[.、)]\s*/,'').trim();
   if(!text){speak.idx++;speakNext();return;}
-  var rate=SPEAK_RATES[speak.rateIdx].v,pitch=SPEAK_TONES[speak.toneIdx].p,P=ttsPlugin();
+  var rate=SPEAK_RATES[speak.rateIdx].v,P=ttsPlugin();
   if(P){
-    P.speak({text:text,rate:rate,pitch:pitch}).then(function(){speakAdvance(seq);}).catch(function(e){
+    P.speak({text:text,rate:rate}).then(function(){speakAdvance(seq);}).catch(function(e){
       speakFail(seq,(e&&e.message)||String(e||'朗读失败'));
     });
     return;
@@ -712,7 +709,7 @@ function speakNext(){
   /* 浏览器兜底：多数 WebView 没有 speechSynthesis，这里通常走不到 */
   try{
     var u=new SpeechSynthesisUtterance(text);
-    u.lang='zh-CN';u.rate=rate;u.pitch=pitch;
+    u.lang='zh-CN';u.rate=rate;u.pitch=1;
     var vs=window.speechSynthesis.getVoices()||[],v=null;
     for(var i=0;i<vs.length;i++){if(/^zh/i.test(vs[i].lang||'')){v=vs[i];break;}}
     if(v)u.voice=v;
@@ -1204,12 +1201,6 @@ document.addEventListener('click',function(e){
     var nr=SPEAK_RATES[speak.rateIdx];
     if(el)el.textContent=nr.n;
     toast('语速：'+nr.n);
-  }
-  else if(act==='speakTone'){
-    speak.toneIdx=(speak.toneIdx+1)%SPEAK_TONES.length;
-    var nt=SPEAK_TONES[speak.toneIdx];
-    if(el)el.textContent=nt.n;
-    toast('音色：'+nt.n);
   }
   else if(act==='star'){
     var n=+el.getAttribute('data-n');state.form.rating=n;
