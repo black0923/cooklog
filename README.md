@@ -84,7 +84,12 @@ node scripts/sync-web.js      # 网页资源同步进 www/
 node scripts/build-apk.js     # 产出根目录的「厨房手记.apk」（debug 签名，可直装覆盖）
 ```
 
-改版本号只需改 `version.json`，`build-bundle.js` 会把它注入 `index.html` 的 `APP_VERSION`。
+改版本号只需改 `version.json`，脚本会把它同步到两个地方：
+
+- `build-bundle.js` 把版本号注入 `index.html` 的 `APP_VERSION` → 决定 **App 里显示**的版本
+- `build-apk.js` 额外算出 `versionCode`（`1.2.2 → 10202`）写进 `android/version.properties`，Gradle 从这里读 → 决定 **安装器**看到的版本、以及能否覆盖安装
+
+两者必须一起出：只发网页包不重打 APK，新装用户拿到的就是旧版本，进 App 却会提示有新版本（这正是真实发生过的事）。
 
 ## 发布热更新
 
@@ -106,14 +111,15 @@ node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.
 
 1. **原生改动只能靠重装 APK。** 热更只下发 `www/` 里的网页资源，改 Java、Manifest、权限、图标、启动图都进不去。
 2. **更新逻辑本身修不了自己。** 如果某版的检查更新代码是错的，热更补丁也包含那段错代码，只能装一次新 APK 才能跳出来。
-3. **下载必须带校验值。** `capacitor-updater` 8.54 的 `download` 在发请求前强制校验 sha256，`checksum` 为空直接抛 `Checksum required`（表现为 `Failed to download from: <url>`，很容易误判成网络问题）。
-4. **`set()` 传 `{ id }`，不是整个 bundle 对象。** 而且它成功后原生会**自动重启**，Promise 永远不会 resolve，后面别写「请重启 App」之类的逻辑。
-5. **Capacitor 8 不会自动挂载插件。** `Capacitor.Plugins.X` 是空的，必须用 `registerPlugin`（`lan-bridge.src.js` 就是干这个的，用 esbuild 打成 IIFE 提供给页面）。
-6. **AGP 会拦中文路径。** 项目路径含中文时 `android/gradle.properties` 必须有 `android.overridePathCheck=true`。
-7. **IndexedDB 的 `transaction()` 第一个参数要传数组**（`transaction(['logs'], 'readonly')`），传字符串在部分 WebView 里直接不触发回调。
-8. **好友端页面由网页传给原生。** 原生不再硬读 APK 里的 `lan.html`，所以以后改好友端界面能跟着热更走。
-9. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
-10. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
+3. **有两个版本号，别混。** 安装器只认 Gradle 的 `versionCode`（必须单调递增，否则覆盖安装会被当成同版本拦下）；App 里显示的是网页的 `APP_VERSION`。发版时 `version.json` 升一次，`build-apk.js` 两边一起写；**不要只发热更包不重打 APK**，否则新装用户装到的是旧版本，进去却提示有新版本。
+4. **下载必须带校验值。** `capacitor-updater` 8.54 的 `download` 在发请求前强制校验 sha256，`checksum` 为空直接抛 `Checksum required`（表现为 `Failed to download from: <url>`，很容易误判成网络问题）。
+5. **`set()` 传 `{ id }`，不是整个 bundle 对象。** 而且它成功后原生会**自动重启**，Promise 永远不会 resolve，后面别写「请重启 App」之类的逻辑。
+6. **Capacitor 8 不会自动挂载插件。** `Capacitor.Plugins.X` 是空的，必须用 `registerPlugin`（`lan-bridge.src.js` 就是干这个的，用 esbuild 打成 IIFE 提供给页面）。
+7. **AGP 会拦中文路径。** 项目路径含中文时 `android/gradle.properties` 必须有 `android.overridePathCheck=true`。
+8. **IndexedDB 的 `transaction()` 第一个参数要传数组**（`transaction(['logs'], 'readonly')`），传字符串在部分 WebView 里直接不触发回调。
+9. **好友端页面由网页传给原生。** 原生不再硬读 APK 里的 `lan.html`，所以以后改好友端界面能跟着热更走。
+10. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
+11. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
 
 ## 数据
 

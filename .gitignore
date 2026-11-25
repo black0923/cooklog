@@ -21,3 +21,6 @@ lan-bridge.js
 Thumbs.db
 .idea/
 .vscode/
+
+# 打包时由 scripts/build-apk.js 从 version.json 生成
+android/version.properties

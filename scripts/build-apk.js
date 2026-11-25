@@ -31,7 +31,24 @@ function run(cmd, cwd) {
   cp.execSync(cmd, { cwd: cwd || root, env: env, stdio: 'inherit', shell: 'cmd.exe' });
 }
 
+/* 把 version.json 的版本号写成 Gradle 能读的 versionCode / versionName
+ * 1.2.2 → versionCode 10202，保证每次发版单调递增（否则覆盖安装会被判为同版本） */
+function writeVersionProps() {
+  let ver = '1.0.0';
+  try {
+    ver = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8')).version || ver;
+  } catch (e) {}
+  const parts = ver.split('.').map(function (x) { return parseInt(x, 10) || 0; });
+  const code = (parts[0] || 0) * 10000 + (parts[1] || 0) * 100 + (parts[2] || 0);
+  fs.writeFileSync(
+    path.join(root, 'android/version.properties'),
+    '# 由 scripts/build-apk.js 自动生成，不要手改\nversionName=' + ver + '\nversionCode=' + code + '\n'
+  );
+  console.log('versionName: ' + ver + '  versionCode: ' + code);
+}
+
 run('node scripts\\build-bundle.js');
+writeVersionProps();
 run('npx cap sync android');
 run('gradlew.bat assembleDebug', path.join(root, 'android'));
 

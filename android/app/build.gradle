@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+// 版本号由 scripts/build-apk.js 从 version.json 生成到 android/version.properties。
+// 安装器只认这里的 versionCode：它必须随每次发版递增，否则覆盖安装会被当成「同版本」拦下。
+// 网页里的 APP_VERSION 只影响 App 内的显示，和安装/升级判断无关。
+def verFile = rootProject.file('version.properties')
+def verProps = new Properties()
+if (verFile.exists()) {
+    verFile.withInputStream { verProps.load(it) }
+}
+def appVersionName = verProps.getProperty('versionName', '1.0.0')
+def appVersionCode = verProps.getProperty('versionCode', '1').toInteger()
+
 android {
     namespace = "com.cooklog.kitchen"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +18,8 @@ android {
         applicationId "com.cooklog.kitchen"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
