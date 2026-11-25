@@ -265,7 +265,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.10';
+var APP_VERSION='1.2.11';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -656,7 +656,7 @@ function stepsBlock(text){
   var lines=String(text||'').split(/\n/).filter(function(s){return !!s.trim();});
   var body=lines.map(function(s,i){return '<div class="sl" data-i="'+i+'">'+esc(s)+'</div>';}).join('');
   var ctrl='<div class="sub-title speak-head"><span>做法</span><span class="speak-ctrls">'+
-    '<button class="btn btn-soft btn-mini" data-act="speakRate">语速 '+SPEECH_RATES[speak.rateIdx].n+'</button>'+
+    '<button class="btn btn-soft btn-mini" data-act="speakRate">语速 '+SPEAK_RATES[speak.rateIdx].n+'</button>'+
     (speakOK()?'<button class="btn btn-solid btn-mini" data-act="speak">'+(speak.playing?'停止朗读':'朗读步骤')+'</button>':'')+
     '</span></div>';
   return ctrl+'<div class="steps" id="stepsBox">'+body+'</div>';
@@ -682,14 +682,20 @@ function speakNext(){
   var text=rows[speak.idx].textContent.replace(/^\s*\d+\s*[.、)]\s*/,'').trim();
   if(!text){speak.idx++;speakNext();return;}
   var u=new SpeechSynthesisUtterance(text);
-  u.lang='zh-CN';u.rate=SPEECH_RATES[speak.rateIdx].v;u.pitch=1;
+  u.lang='zh-CN';u.rate=SPEAK_RATES[speak.rateIdx].v;u.pitch=1;
   try{
     var vs=window.speechSynthesis.getVoices()||[],v=null;
     for(var i=0;i<vs.length;i++){if(/^zh/i.test(vs[i].lang||'')){v=vs[i];break;}}
     if(v)u.voice=v;
   }catch(e){}
   u.onend=function(){if(!speak.playing)return;speak.idx++;speakNext();};
-  u.onerror=function(){if(!speak.playing)return;speakStop();toast('朗读被系统中断');};
+  u.onerror=function(ev){
+    if(!speak.playing)return;
+    /* interrupted 是 cancel() 自己触发的，属正常停止，不提示 */
+    if(ev&&ev.error==='interrupted')return;
+    speakStop();
+    toast('朗读中断，请检查系统语音包');
+  };
   try{window.speechSynthesis.speak(u);}catch(e){speakStop();toast('朗读启动失败');}
 }
 function speakStart(){
@@ -1168,8 +1174,8 @@ document.addEventListener('click',function(e){
   else if(act==='detail'){if(speak.playing)speakStop();state.detailDish=el.getAttribute('data-dish');state.view='detail';render();}
   else if(act==='speak'){if(speak.playing)speakStop();else speakStart();}
   else if(act==='speakRate'){
-    speak.rateIdx=(speak.rateIdx+1)%SPEECH_RATES.length;
-    var nr=SPEECH_RATES[speak.rateIdx];
+    speak.rateIdx=(speak.rateIdx+1)%SPEAK_RATES.length;
+    var nr=SPEAK_RATES[speak.rateIdx];
     var rb=document.querySelector('[data-act="speakRate"]');if(rb)rb.textContent='语速 '+nr.n;
     toast('语速：'+nr.n);
   }
