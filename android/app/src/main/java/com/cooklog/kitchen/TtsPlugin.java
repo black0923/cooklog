@@ -54,6 +54,12 @@ public class TtsPlugin extends Plugin {
         } catch (Exception ignored) { }
         if (rate <= 0) rate = 1f;
         final float finalRate = rate;
+        float pitch = 1f;
+        try {
+            Double pv = call.getDouble("pitch");
+            if (pv != null) pitch = pv.floatValue();
+        } catch (Exception ignored) { }
+        final float finalPitch = pitch;
         ensure(call, new Ready() {
             @Override public void ok(boolean yes) {
                 if (!yes) { call.reject("系统缺少中文语音包"); return; }
@@ -63,6 +69,7 @@ public class TtsPlugin extends Plugin {
                 current = call;
                 try {
                     tts.setSpeechRate(finalRate);
+                    tts.setPitch(finalPitch);
                     int res = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id);
                     if (res != TextToSpeech.SUCCESS) { current = null; currentId = null; call.reject("朗读失败"); }
                 } catch (Exception e) { current = null; currentId = null; call.reject("朗读失败"); }
