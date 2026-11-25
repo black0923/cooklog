@@ -63,6 +63,7 @@
   .dishcard .nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .dishcard .row{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:11px;color:var(--ink-3)}
   .stars{color:var(--star);letter-spacing:1px;font-size:12px}
+  .mine-scroll{height:calc(100vh - 210px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:8px;padding-right:2px}
   .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
   .search:focus{border-color:var(--brand)}
 
@@ -259,7 +260,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.3';
+var APP_VERSION='1.2.5';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -624,7 +625,7 @@ function vToday(){
 }
 function vMine(){
   return '<input class="search" id="search" placeholder="搜索菜名或配料，比如：鸡" value="'+esc(state.search)+'" autocomplete="off">'+
-    '<div id="mineWrap">'+mineBody()+'</div>';
+    '<div class="mine-scroll" id="mineWrap">'+mineBody()+'</div>';
 }
 function mineBody(){
   var ds=byDish(),q=state.search.trim().toLowerCase();
@@ -667,9 +668,9 @@ function vDetail(){
   return h;
 }
 function vForm(){
-  var f=state.form,names={};state.logs.forEach(function(l){names[l.dish]=1;});
+  var f=state.form;
   var h='<div class="card">';
-  h+='<div class="form-row"><label>菜名</label><input class="inp" id="f_dish" list="dishList" placeholder="比如：番茄炒蛋" value="'+esc(f.dish)+'"><datalist id="dishList">'+Object.keys(names).map(function(n){return '<option value="'+esc(n)+'">';}).join('')+'</datalist></div>';
+  h+='<div class="form-row"><label>菜名</label><input class="inp" id="f_dish" placeholder="比如：番茄炒蛋" value="'+esc(f.dish)+'"></div>';
   h+='<div class="form-row"><label>这次做得怎么样</label><div class="star-pick" id="f_stars">'+[1,2,3,4,5].map(function(i){return '<span data-act="star" data-n="'+i+'" class="'+(i<=f.rating?'on':'')+'">★</span>';}).join('')+'</div></div>';
   h+='<div class="form-row"><label>成品菜图 <span style="color:var(--ink-3);font-weight:400">（可多张，最多 9 张）</span></label><div class="photos" id="f_photos">'+
     f.images.map(function(im,i){return '<div class="photo-item"><img src="'+im+'" alt=""><button class="rm" data-act="rmphoto" data-i="'+i+'">×</button></div>';}).join('')+
@@ -822,7 +823,7 @@ function runSelfTest(manual){
   if(manual){toast('正在检查服务…');render();}
   P.selfTest().then(function(r){
     lan.check=!!(r&&r.ok);
-    if(!lan.check)lan.checkMsg='返回状态 '+((r&&r.status)||'?');
+    if(!lan.check)lan.checkMsg=(r&&r.msg)||('返回状态 '+((r&&r.status)||'?'));
     if(manual&&lan.check)toast('服务正常，可以打开试试');
     render();
   }).catch(function(e){

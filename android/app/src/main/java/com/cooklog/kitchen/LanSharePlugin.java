@@ -263,25 +263,37 @@ public class LanSharePlugin extends Plugin {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                HttpURLConnection conn = null;
                 try {
-                    URL u = new URL("http://127.0.0.1:" + port + "/" + c + "/api/data");
-                    conn = (HttpURLConnection) u.openConnection();
-                    conn.setConnectTimeout(2500);
-                    conn.setReadTimeout(4000);
-                    int st = conn.getResponseCode();
+                    // 页面和接口都要测：只测接口会漏掉「页面路由自己重定向到自己」这类问题
+                    int page = httpStatus(port, "/" + c + "/");
+                    int api = httpStatus(port, "/" + c + "/api/data");
                     JSObject ret = new JSObject();
-                    ret.put("ok", st == 200);
-                    ret.put("status", st);
+                    ret.put("ok", page == 200 && api == 200);
+                    ret.put("status", page);
+                    ret.put("apiStatus", api);
                     ret.put("port", port);
+                    if (page != 200) ret.put("msg", "选菜页面返回 " + page);
+                    else if (api != 200) ret.put("msg", "菜品接口返回 " + api);
                     call.resolve(ret);
                 } catch (Exception e) {
                     call.reject(e.getMessage() == null ? e.toString() : e.getMessage());
-                } finally {
-                    if (conn != null) conn.disconnect();
                 }
             }
         }).start();
+    }
+
+    private static int httpStatus(int port, String path) throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            URL u = new URL("http://127.0.0.1:" + port + path);
+            conn = (HttpURLConnection) u.openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(2500);
+            conn.setReadTimeout(4000);
+            return conn.getResponseCode();
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     /** 交给系统浏览器打开，省得用户复制地址再粘贴 */
@@ -315,18 +327,21 @@ public class LanSharePlugin extends Plugin {
             try {
                 String uri = session.getUri();
                 if (uri == null) uri = "/";
+                int q = uri.indexOf('?');
+                if (q >= 0) uri = uri.substring(0, q);
                 String[] seg = uri.split("/");
-                // "/{code}" 补上结尾斜杠，页面里的相对路径才不会跑到根
+                // Java 的 split 会丢掉结尾空串："/1234/" 和 "/1234" 都是 length=2。
+                // 必须按原始 URI 是否带斜杠区分，否则 "/1234/" 会重定向到自己，浏览器死循环。
                 if (seg.length == 2 && code.equals(seg[1])) {
+                    if (uri.endsWith("/")) {
+                        return cors(html());
+                    }
                     Response r = newFixedLengthResponse(Response.Status.REDIRECT, "text/plain", "");
                     r.addHeader("Location", "/" + code + "/");
                     return cors(r);
                 }
                 if (seg.length < 2 || !code.equals(seg[1])) {
                     return cors(newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "not found"));
-                }
-                if (seg.length == 2) {
-                    return cors(html());
                 }
                 String head = seg[2];
                 if ("api".equals(head) && seg.length >= 4 && "data".equals(seg[3])) {
