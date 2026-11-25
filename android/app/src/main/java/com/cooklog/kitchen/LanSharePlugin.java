@@ -31,9 +31,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -413,12 +411,34 @@ public class LanSharePlugin extends Plugin {
             }
         }
 
+        /**
+         * NanoHTTPD 的 parseBody 会按请求头 Content-Type 里的 charset 解码 body；
+         * 好友端没带 charset 时它按 US-ASCII 解，中文全变成问号（纯数字没事）。
+         * 这里直接读原始字节并按 UTF-8 解，不依赖浏览器有没有写 charset。
+         */
+        private String readUtf8Body(IHTTPSession session) throws Exception {
+            String lenStr = session.getHeaders().get("content-length");
+            int len = 0;
+            try {
+                len = Integer.parseInt(lenStr == null ? "0" : lenStr.trim());
+            } catch (NumberFormatException ignored) {
+            }
+            if (len <= 0) return "";
+            InputStream in = session.getInputStream();
+            byte[] buf = new byte[len];
+            int off = 0;
+            while (off < len) {
+                int n = in.read(buf, off, len - off);
+                if (n < 0) break;
+                off += n;
+            }
+            return new String(buf, 0, off, StandardCharsets.UTF_8).trim();
+        }
+
         private Response submit(IHTTPSession session) {
             try {
-                Map<String, String> files = new HashMap<>();
-                session.parseBody(files);
-                String body = files.get("postData");
-                if (body == null || body.isEmpty()) throw new Exception("empty");
+                String body = readUtf8Body(session);
+                if (body.isEmpty()) throw new Exception("empty");
                 JSONObject o = new JSONObject(body);
                 JSONArray arr = o.optJSONArray("picks");
                 if (arr == null || arr.length() == 0) throw new Exception("empty picks");
