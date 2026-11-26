@@ -314,7 +314,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.3.0';
+var APP_VERSION='1.3.1';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -464,6 +464,7 @@ function saveGroups(){try{localStorage.setItem(GROUPS_KEY,JSON.stringify(groups)
 function allGroupNames(){return ['全部'].concat(groups,['未分组']);}
 var PICKS_KEY='cooklog_picks_v1';
 var RECO_KEY='cooklog_ai_reco_v1';
+var WEATHER_KEY='cooklog_weather_v1';
 var picks=(function(){
   try{var a=JSON.parse(localStorage.getItem(PICKS_KEY)||'[]');return Array.isArray(a)?a.filter(function(x){return typeof x==='string'&&x;}):[];}
   catch(e){return[];}
@@ -660,6 +661,7 @@ var state={view:'today',logs:[],search:'',detailDish:'',form:null,formBack:'toda
   group:(function(){try{var g=localStorage.getItem(GROUP_CUR_KEY);if(g&&allGroupNames().indexOf(g)>=0)return g;}catch(e){}return '全部';})()};
 /* 我的菜长按多选 */
 var multi={on:false,sel:{},hold:null,block:false};
+var weather={city:'',temp:null,desc:'',ts:0,loading:false,promise:null};
 
 function byDish(){
   var m={};
@@ -696,6 +698,63 @@ function todayStr(){
 function seasonName(){
   var m=new Date().getMonth()+1;
   return m>=3&&m<=5?'春季':m>=6&&m<=8?'夏季':m>=9&&m<=11?'秋季':'冬季';
+}
+function weatherCodeText(c){
+  c=Number(c);
+  if(c===0)return '晴';
+  if(c>=1&&c<=3)return '多云';
+  if(c===45||c===48)return '雾';
+  if(c>=51&&c<=67)return '雨';
+  if(c>=71&&c<=77)return '雪';
+  if(c>=80&&c<=82)return '阵雨';
+  if(c>=95)return '雷雨';
+  return '';
+}
+function weatherLabel(){
+  if(weather.temp===null)return '';
+  var s='实时 '+weather.temp+'°C';
+  if(weather.desc)s+=' '+weather.desc;
+  if(weather.city&&/[\u4e00-\u9fa5]/.test(weather.city))s=weather.city+' '+s;
+  return s;
+}
+function fetchWeather(){
+  if(weather.promise)return weather.promise;
+  var c=null;try{c=JSON.parse(localStorage.getItem(WEATHER_KEY)||'null');}catch(e){}
+  if(c&&Date.now()-(c.ts||0)<1800000&&typeof c.temp==='number'){
+    weather.city=c.city||'';weather.temp=c.temp;weather.desc=c.desc||'';weather.ts=c.ts||0;
+    return Promise.resolve(weather);
+  }
+  if(!window.fetch)return Promise.resolve(weather);
+  weather.promise=fetch('https://ipwho.is/',{cache:'no-store'}).then(function(r){return r.json();}).then(function(g){
+    if(!g||!g.success||!g.latitude||!g.longitude)throw new Error('定位失败');
+    weather.city=g.city||g.region||'';
+    var u='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(g.latitude)+
+      '&longitude='+encodeURIComponent(g.longitude)+'&current=temperature_2m,weather_code&timezone=auto';
+    return fetch(u,{cache:'no-store'}).then(function(r){return r.json();});
+  }).then(function(w){
+    var cur=w&&w.current;
+    if(!cur||typeof cur.temperature_2m!=='number')throw new Error('天气失败');
+    weather.temp=Math.round(cur.temperature_2m);
+    weather.desc=weatherCodeText(cur.weather_code);
+    weather.ts=Date.now();
+    try{localStorage.setItem(WEATHER_KEY,JSON.stringify({city:weather.city,temp:weather.temp,desc:weather.desc,ts:weather.ts}));}catch(e){}
+  }).catch(function(){}).then(function(){
+    weather.promise=null;
+    if(state.view==='today')render();
+    return weather;
+  });
+  return weather.promise;
+}
+function ensureWeather(){
+  return (weather.temp!==null||weather.promise)?Promise.resolve(weather):fetchWeather();
+}
+function seasonText(){
+  var s=seasonName();
+  if(weather.temp!==null){
+    s+='，'+(weather.city?weather.city+' ':'')+'实时气温 '+weather.temp+'°C';
+    if(weather.desc)s+='（'+weather.desc+'）';
+  }
+  return s;
 }
 function loadRecoCache(){
   try{return JSON.parse(localStorage.getItem(RECO_KEY)||'null');}catch(e){return null;}
@@ -751,7 +810,9 @@ function requestReco(force){
   if(force)state.reco.items=[];
   state.reco.loading=true;state.reco.error='';
   if(state.view==='today')render();
-  P.recommend({dishes:recoProfile(),date:todayStr(),season:seasonName(),exclude:exclude}).then(function(r){
+  ensureWeather().then(function(){
+    return P.recommend({dishes:recoProfile(),date:todayStr(),season:seasonText(),exclude:exclude});
+  }).then(function(r){
     var items=normalizeReco(r&&r.items);
     if(seq!==state.reco.seq)return;
     if(!items.length)throw new Error('没推荐出来');
@@ -826,8 +887,9 @@ function vToday(){
   if(!state.logs.length)return '<div class="empty">'+UI.plate+'<p>还没有任何记录</p><p>从下面「记一道」开始，把做过的菜存起来</p><button class="btn btn-solid" data-act="go" data-v="form" style="margin-top:14px">记第一道菜</button></div>';
   var list=batchList(),pk=vPicks();
   var h=pk;
-  var note=state.reco.loading?'正在结合当季、气温和你的菜谱挑…':
-    (state.reco.items.length?seasonName()+' · 按当季和营养搭配，从你的菜谱里挑':
+  var wl=weatherLabel();
+  var note=state.reco.loading?'正在结合'+(wl?wl+'、':'')+'你的菜谱挑…':
+    (state.reco.items.length?seasonName()+(wl?' · '+wl:'')+' · 按当季和营养搭配，从你的菜谱里挑':
       '随手挑几道，先看看今天想吃什么');
   h+='<div class="sec-title" style="margin-top:'+(pk?'16px':'4px')+'">今天吃什么 <button class="btn btn-soft" style="padding:6px 12px;font-size:12px" data-act="reroll">换一批</button></div>';
   h+='<div class="reco-note">'+esc(note)+(state.reco.error?' · '+esc(state.reco.error):'')+'</div>';
@@ -1712,7 +1774,7 @@ app.addEventListener('input',function(e){
   }
 });
 
-Store.open().then(function(){return Store.getAll();}).then(function(logs){state.logs=logs||[];render();});
+Store.open().then(function(){return Store.getAll();}).then(function(logs){state.logs=logs||[];render();if(window.fetch)fetchWeather();});
 notifyReady();
 setTimeout(function(){if(isNative())checkUpdate(false);},2500);
 })();
