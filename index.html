@@ -314,7 +314,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.3.1';
+var APP_VERSION='1.3.2';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -1097,7 +1097,6 @@ function vForm(){
     '<div class="hint">可以直接拍照，也能从相册选；自动压缩到约 720px 存在本机，一张约几十 KB</div></div>';
   h+='<div class="form-row"><label>做法步骤</label><textarea class="ta" id="f_steps" style="min-height:110px" placeholder="1. …\n2. …">'+esc(f.steps)+'</textarea></div>';
   h+='<div class="form-row"><label>配料 <span style="color:var(--ink-3);font-weight:400">（写完步骤自动识别，也能自己改）</span></label><textarea class="ta" id="f_ing" placeholder="番茄、鸡蛋、葱">'+esc(f.ingredients)+'</textarea></div>';
-  h+='<div class="form-row"><label>记录日期</label><input class="inp" type="date" id="f_date" value="'+f.date+'"></div>';
   h+='<div class="form-row"><label>分组</label><select class="inp" id="f_group">'+
     groups.map(function(g){return '<option value="'+esc(g)+'"'+(f.group===g?' selected':'')+'>'+esc(g)+'</option>';}).join('')+
     '<option value=""'+(f.group?'':' selected')+'>未分组</option></select></div>';
@@ -1398,7 +1397,7 @@ function openForm(dish,editId,back){
     images:base?imgsOf(base).slice():[],
     ingredients:base?base.ingredients:'',
     steps:base?base.steps:'',
-    date:base?fmtInputDate(base.date):new Date().toISOString().slice(0,10)
+    date:todayStr()
   };
   state.formBack=back||((editId||dish)?'detail':'mine');
   aiLastText='';
@@ -1410,7 +1409,7 @@ function collectForm(){
   f.group=document.getElementById('f_group').value;
   f.ingredients=document.getElementById('f_ing').value.trim();
   f.steps=document.getElementById('f_steps').value.trim();
-  f.date=document.getElementById('f_date').value;
+  f.date=todayStr();
 }
 function compress(file,cb){
   var fr=new FileReader();
@@ -1770,7 +1769,6 @@ app.addEventListener('input',function(e){
     if(e.target.id==='f_dish')state.form.dish=e.target.value;
     else if(e.target.id==='f_ing')state.form.ingredients=e.target.value;
     else if(e.target.id==='f_steps')state.form.steps=e.target.value;
-    else if(e.target.id==='f_date')state.form.date=e.target.value;
   }
 });
 
