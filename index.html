@@ -61,13 +61,15 @@
   .dishcard .ph img{width:100%;height:100%;object-fit:cover}
   .dishcard .info{padding:9px 8px 10px}
   .dishcard .nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mine-scroll{height:calc(100vh - 255px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:2px;padding-right:2px}
+  .mine-scroll{height:calc(100vh - 203px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:2px;padding-right:2px}
   .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
   .search:focus{border-color:var(--brand)}
   .gtabs{display:flex;gap:7px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .gtabs::-webkit-scrollbar{display:none}
-  .gt{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;
+  .gt{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;
     padding:6px 14px;font-size:12.5px;font-family:inherit;cursor:pointer}
+  .gt-n{font-size:11px;color:var(--ink-3);font-weight:400;line-height:1}
+  .gt.on .gt-n{color:rgba(255,255,255,.85)}
   .gt.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
   .gt-add{flex:0 0 auto;width:31px;height:31px;border-radius:50%;border:1px dashed var(--line);
     background:var(--surface);color:var(--ink-3);font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
@@ -287,7 +289,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.17';
+var APP_VERSION='1.2.18';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -709,9 +711,25 @@ function vMine(){
     '<div class="gtabs" id="gtabs">'+groupTabsHtml()+'</div>'+
     '<div class="mine-scroll" id="mineWrap">'+mineBody()+'</div>';
 }
+function searchedDishes(){
+  var ds=byDish(),q=state.search.trim().toLowerCase();
+  if(!q)return ds;
+  return ds.filter(function(d){
+    return d.dish.toLowerCase().indexOf(q)>=0||d.ings.toLowerCase().indexOf(q)>=0;
+  });
+}
+function mineGroupCounts(){
+  var counts={};allGroupNames().forEach(function(g){counts[g]=0;});
+  searchedDishes().forEach(function(d){
+    counts['全部']++;
+    var g=d.g||'未分组';counts[g]=(counts[g]||0)+1;
+  });
+  return counts;
+}
 function groupTabsHtml(){
+  var counts=mineGroupCounts();
   return allGroupNames().map(function(g){
-    return '<button class="gt'+(state.group===g?' on':'')+'" data-act="group" data-g="'+esc(g)+'">'+esc(g)+'</button>';
+    return '<button class="gt'+(state.group===g?' on':'')+'" data-act="group" data-g="'+esc(g)+'">'+esc(g)+'<span class="gt-n">'+counts[g]+'</span></button>';
   }).join('')+'<button class="gt-add" data-act="groupAdd" title="管理分组">＋</button>';
 }
 function switchGroup(g){
@@ -723,13 +741,10 @@ function switchGroup(g){
   refreshMine();
 }
 function mineBody(){
-  var ds=byDish(),q=state.search.trim().toLowerCase();
+  var ds=searchedDishes(),q=state.search.trim().toLowerCase();
   if(state.group==='未分组')ds=ds.filter(function(d){return !d.g;});
   else if(state.group!=='全部')ds=ds.filter(function(d){return d.g===state.group;});
-  if(q)ds=ds.filter(function(d){
-    return d.dish.toLowerCase().indexOf(q)>=0||d.ings.toLowerCase().indexOf(q)>=0;
-  });
-  var h='<div class="sec-title">我的菜 <small>'+ds.length+' 种</small></div>';
+  var h='';
   if(!ds.length)return h+'<div class="empty">'+UI.grid+'<p>'+(q?'没找到相关配料或菜名':(state.group==='全部'?'还没有记录':'这个分组还没有菜'))+'</p></div>';
   h+='<div class="grid">';
   ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div></div></div>';});
@@ -1017,6 +1032,14 @@ function startShare(){
   }catch(e){}
   Promise.all([htmlP,Promise.all(tasks)]).then(function(res){
     var guestHtml=res[0]||'', list=res[1];
+    /* 分组信息随页面下发：不用改原生插件，热更即可生效 */
+    var groupMap={};
+    ds.forEach(function(d){groupMap[d.dish]=d.g||'未分组';});
+    var meta=JSON.stringify({
+      order:allGroupNames().filter(function(g){return g!=='全部';}),
+      groups:groupMap
+    }).replace(/</g,'\\u003c');
+    guestHtml=guestHtml.replace('__SHARE_META__',meta);
     var code=String(1000+Math.floor(Math.random()*9000));
     return P.start({dishes:list,code:code,html:guestHtml}).then(function(r){
       lan.running=true;
@@ -1429,7 +1452,14 @@ app.addEventListener('compositionstart',function(e){if(e.target.id==='search')co
 app.addEventListener('compositionend',function(e){
   if(e.target.id==='search'){composing=false;state.search=e.target.value;refreshMine();}
 });
-function refreshMine(){var w=document.getElementById('mineWrap');if(w)w.innerHTML=mineBody();}
+function refreshMine(){
+  var w=document.getElementById('mineWrap');if(w)w.innerHTML=mineBody();
+  var counts=mineGroupCounts();
+  [].slice.call(document.querySelectorAll('#gtabs .gt')).forEach(function(b){
+    var n=b.querySelector('.gt-n'),v=counts[b.getAttribute('data-g')]||0;
+    if(n&&n.textContent!==String(v))n.textContent=v;
+  });
+}
 app.addEventListener('blur',function(e){
   if(e.target&&e.target.id==='f_steps')autoFillIngredients();
 },true);
