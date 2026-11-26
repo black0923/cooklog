@@ -179,6 +179,13 @@
   .reco-item .ph svg{width:30px;height:30px;opacity:.4}
   .reco-item .ri{flex:1;min-width:0}
   .reco-item .nm{font-size:16px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reco-item .why{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reco-item .newtag{display:inline-block;font-size:10px;font-weight:500;color:var(--brand);background:var(--brand-soft);
+    border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:2px}
+  .reco-loading{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:22px 14px;
+    text-align:center;color:var(--ink-3);font-size:13px}
+  .reco-note{font-size:12px;color:var(--ink-3);margin:-2px 2px 10px}
   .reco-item .ingline{margin-top:6px;gap:4px}
   .reco-item .ingline .ii{font-size:11px;padding:2px 7px 2px 4px}
   .reco-item .ingline .ii svg{width:14px;height:14px}
@@ -307,7 +314,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.20';
+var APP_VERSION='1.3.0';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -456,6 +463,7 @@ var groups=(function(){
 function saveGroups(){try{localStorage.setItem(GROUPS_KEY,JSON.stringify(groups));}catch(e){}}
 function allGroupNames(){return ['全部'].concat(groups,['未分组']);}
 var PICKS_KEY='cooklog_picks_v1';
+var RECO_KEY='cooklog_ai_reco_v1';
 var picks=(function(){
   try{var a=JSON.parse(localStorage.getItem(PICKS_KEY)||'[]');return Array.isArray(a)?a.filter(function(x){return typeof x==='string'&&x;}):[];}
   catch(e){return[];}
@@ -648,6 +656,7 @@ function ph(imgs,cls){
 
 /* ---------- 状态 ---------- */
 var state={view:'today',logs:[],search:'',detailDish:'',form:null,formBack:'today',batch:null,batchExclude:[],
+  reco:{items:[],loading:false,error:'',seq:0,disabled:false},
   group:(function(){try{var g=localStorage.getItem(GROUP_CUR_KEY);if(g&&allGroupNames().indexOf(g)>=0)return g;}catch(e){}return '全部';})()};
 /* 我的菜长按多选 */
 var multi={on:false,sel:{},hold:null,block:false};
@@ -680,7 +689,86 @@ function pickBatch(n,exclude){
   }
   return out;
 }
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function seasonName(){
+  var m=new Date().getMonth()+1;
+  return m>=3&&m<=5?'春季':m>=6&&m<=8?'夏季':m>=9&&m<=11?'秋季':'冬季';
+}
+function loadRecoCache(){
+  try{return JSON.parse(localStorage.getItem(RECO_KEY)||'null');}catch(e){return null;}
+}
+function saveRecoCache(items){
+  try{localStorage.setItem(RECO_KEY,JSON.stringify({day:todayStr(),count:byDish().length,items:items}));}catch(e){}
+}
+function normalizeReco(items){
+  var out=[],seen={};
+  (items||[]).forEach(function(it){
+    var name=String((it&&it.name)||'').trim();
+    if(!name||name.length>20||seen[name])return;
+    seen[name]=1;
+    out.push({name:name,reason:String((it&&it.reason)||'').trim().slice(0,40),known:!!(it&&it.known)});
+  });
+  return out.slice(0,5);
+}
+function recoProfile(){
+  return byDish().slice(0,50).map(function(d){
+    var ing=String(d.ings||'').replace(/\s+/g,' ').slice(0,50);
+    return d.dish+'（'+(d.g||'未分组')+'）'+(ing?'：'+ing:'');
+  }).join('；');
+}
+function aiRecommendAvailable(){
+  var P=aiPlugin();
+  return !!(P&&typeof P.recommend==='function');
+}
+function recoList(){
+  if(!state.reco.items.length)return [];
+  var map={};byDish().forEach(function(d){map[d.dish]=d;});
+  return state.reco.items.map(function(it){
+    var known=!!it.known&&!!map[it.name];
+    return {dish:it.name,reason:it.reason||'',known:known,log:known?map[it.name]:null};
+  });
+}
+function ensureReco(){
+  if(!state.logs.length||state.reco.loading||state.reco.items.length||state.reco.disabled)return;
+  var c=loadRecoCache();
+  if(c&&c.day===todayStr()&&c.count===byDish().length&&Array.isArray(c.items)&&c.items.length){
+    state.reco.items=normalizeReco(c.items);
+    if(state.view==='today')render();
+    return;
+  }
+  requestReco(false);
+}
+function requestReco(force){
+  if(!state.logs.length)return;
+  var P=aiPlugin();
+  if(!P||typeof P.recommend!=='function'){state.reco.disabled=true;return;}
+  if(state.reco.loading)return;
+  var seq=++state.reco.seq;
+  var exclude=state.reco.items.map(function(it){return it.name;}).join('、');
+  if(force)state.reco.items=[];
+  state.reco.loading=true;state.reco.error='';
+  if(state.view==='today')render();
+  P.recommend({dishes:recoProfile(),date:todayStr(),season:seasonName(),exclude:exclude}).then(function(r){
+    var items=normalizeReco(r&&r.items);
+    if(seq!==state.reco.seq)return;
+    if(!items.length)throw new Error('没推荐出来');
+    state.reco.items=items;saveRecoCache(items);
+  }).catch(function(e){
+    if(seq!==state.reco.seq)return;
+    state.reco.error=(e&&e.message)||'推荐没成功';
+    state.reco.disabled=true;
+  }).then(function(){
+    if(seq!==state.reco.seq)return;
+    state.reco.loading=false;
+    if(state.view==='today')render();
+  });
+}
 function batchList(){
+  var ai=recoList();
+  if(ai.length)return ai;
   var ds=byDish();if(!ds.length)return [];
   var map={};ds.forEach(function(d){map[d.dish]=d;});
   var names=(state.batch||[]).filter(function(n){return map[n];});
@@ -708,6 +796,7 @@ function render(){
   app.innerHTML=(VIEWS[state.view]||vToday)();
   renderTabs();
   document.getElementById('topSub').textContent=state.logs.length?byDish().length+' 道菜':'开始记第一道菜';
+  if(state.view==='today'&&state.logs.length)setTimeout(ensureReco,0);
 }
 function renderTabs(){
   var tabs=[['today','今天吃什么',UI.plate],['mine','我的菜',UI.grid],['form','记一道',UI.add],['review','回顾',UI.chart]];
@@ -737,12 +826,25 @@ function vToday(){
   if(!state.logs.length)return '<div class="empty">'+UI.plate+'<p>还没有任何记录</p><p>从下面「记一道」开始，把做过的菜存起来</p><button class="btn btn-solid" data-act="go" data-v="form" style="margin-top:14px">记第一道菜</button></div>';
   var list=batchList(),pk=vPicks();
   var h=pk;
-  h+='<div class="sec-title" style="margin-top:'+(pk?'16px':'4px')+'">今天吃什么 <button class="btn btn-soft" style="padding:6px 12px;font-size:12px" data-act="reroll">换一批</button></div><div class="reco">';
-  list.forEach(function(d){
-    h+='<div class="reco-item" data-act="detail" data-dish="'+esc(d.dish)+'">'+
-      ph(d.images,'ph')+
-      '<div class="ri"><div class="nm">'+esc(d.dish)+'</div>'+
-      (d.lastLog?ingTags(d.lastLog.ingredients):'')+'</div></div>';
+  var note=state.reco.loading?'正在结合当季、气温和你的菜谱挑…':
+    (state.reco.items.length?seasonName()+' · 按当季和营养搭配，从你的菜谱里挑':
+      '随手挑几道，先看看今天想吃什么');
+  h+='<div class="sec-title" style="margin-top:'+(pk?'16px':'4px')+'">今天吃什么 <button class="btn btn-soft" style="padding:6px 12px;font-size:12px" data-act="reroll">换一批</button></div>';
+  h+='<div class="reco-note">'+esc(note)+(state.reco.error?' · '+esc(state.reco.error):'')+'</div>';
+  if(state.reco.loading&&!state.reco.items.length)h+='<div class="reco-loading">正在想今天吃什么…</div>';
+  h+='<div class="reco">';
+  list.forEach(function(x){
+    var isAi=Object.prototype.hasOwnProperty.call(x,'known');
+    var log=isAi?x.log:x;
+    var imgs=log&&log.images?log.images:[];
+    var ings=isAi?(log&&log.lastLog?log.lastLog.ingredients:(log&&log.ings?log.ings:'')):
+      (x.lastLog?x.lastLog.ingredients:'');
+    var isNew=isAi&&!x.known;
+    h+='<div class="reco-item" data-act="'+(isNew?'recoNew':'detail')+'" data-dish="'+esc(x.dish)+'">'+
+      (isNew?'<div class="ph">'+UI.plate+'</div>':ph(imgs,'ph'))+
+      '<div class="ri"><div class="nm">'+esc(x.dish)+(isNew?'<span class="newtag">新</span>':'')+'</div>'+
+      (isAi&&x.reason?'<div class="why">'+esc(x.reason)+'</div>':'')+
+      (ings?ingTags(ings):'')+'</div></div>';
   });
   h+='</div>';
   h+='<div class="card" style="margin-top:16px;display:flex;align-items:center;gap:12px">'+
@@ -1222,7 +1324,7 @@ function vShare(){
 }
 
 /* ---------- 交互 ---------- */
-function openForm(dish,editId){
+function openForm(dish,editId,back){
   var base=null;
   if(editId){base=state.logs.filter(function(l){return l.id===editId;})[0]||null;}
   else if(dish){base=state.logs.filter(function(l){return l.dish===dish;}).sort(function(a,b){return b.date-a.date;})[0]||null;}
@@ -1236,7 +1338,7 @@ function openForm(dish,editId){
     steps:base?base.steps:'',
     date:base?fmtInputDate(base.date):new Date().toISOString().slice(0,10)
   };
-  state.formBack=(editId||dish)?'detail':'mine';
+  state.formBack=back||((editId||dish)?'detail':'mine');
   aiLastText='';
   state.view='form';render();
 }
@@ -1293,7 +1395,7 @@ function persistLog(id){
   Store.save(rec).then(function(){
     var found=false;state.logs=state.logs.map(function(l){if(l.id===rec.id){found=true;return rec;}return l;});
     if(!found)state.logs.push(rec);
-    state.form=null;state.view='mine';render();toast('存好了');
+    state.reco.items=[];state.form=null;state.view='mine';render();toast('存好了');
   });
 }
 document.addEventListener('click',function(e){
@@ -1323,7 +1425,7 @@ document.addEventListener('click',function(e){
       Promise.all(targets.map(function(l){return Store.remove(l.id);})).then(function(){
         state.logs=state.logs.filter(function(l){return names.indexOf(l.dish)<0;});
         names.forEach(removePick);
-        exitMulti();toast('已删除 '+names.length+' 道菜');
+        state.reco.items=[];exitMulti();toast('已删除 '+names.length+' 道菜');
       });
     });
     return;
@@ -1346,7 +1448,12 @@ document.addEventListener('click',function(e){
     if(dest==='form'){openForm('');}
     else{state.view=dest;render();}
   }
-  else if(act==='reroll'){state.batchExclude=(state.batch||[]).slice();state.batch=null;render();}
+  else if(act==='reroll'){
+    if(aiRecommendAvailable()||state.reco.items.length){
+      state.reco.disabled=false;requestReco(true);
+    }else{state.batchExclude=(state.batch||[]).slice();state.batch=null;render();}
+  }
+  else if(act==='recoNew'){openForm(el.getAttribute('data-dish'),null,'today');}
   else if(act==='viewimg'){
     var box=el.parentNode;
     var list=[].slice.call(box.querySelectorAll('img')).map(function(x){return x.getAttribute('src');});
@@ -1448,7 +1555,7 @@ document.addEventListener('click',function(e){
         state.logs=state.logs.filter(function(l){return l.id!==id;});
         if(rec&&!state.logs.some(function(l){return l.dish===rec.dish;}))removePick(rec.dish);
         if(!state.logs.some(function(l){return l.dish===state.detailDish;}))state.view='mine';
-        render();toast('已删除');
+        state.reco.items=[];render();toast('已删除');
       });
     });
   }
@@ -1469,7 +1576,7 @@ document.addEventListener('click',function(e){
       checkLabel:'我已备份或不再需要这些记录，确认清空',
       okText:'确认清空'
     },function(){
-      Store.clear().then(function(){state.logs=[];picks=[];savePicks();state.view='today';render();toast('已清空');});
+      Store.clear().then(function(){state.logs=[];picks=[];savePicks();state.reco.items=[];state.view='today';render();toast('已清空');});
     });
   }
   else if(act==='cfCancel'){closeConfirm();}
@@ -1520,7 +1627,7 @@ document.getElementById('jsonIn').addEventListener('change',function(e){
           state.logs.push(o);tasks.push(Store.save(o));n++;
         }
       });
-      Promise.all(tasks).then(function(){render();toast(n?('导入了 '+n+' 条记录'):'没有新记录');});
+      Promise.all(tasks).then(function(){state.reco.items=[];render();toast(n?('导入了 '+n+' 条记录'):'没有新记录');});
     }catch(err){toast('文件格式不对，导入失败');}
   };
   fr.readAsText(file);e.target.value='';
