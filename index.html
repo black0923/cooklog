@@ -61,9 +61,16 @@
   .dishcard .ph img{width:100%;height:100%;object-fit:cover}
   .dishcard .info{padding:9px 8px 10px}
   .dishcard .nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mine-scroll{height:calc(100vh - 210px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:8px;padding-right:2px}
+  .mine-scroll{height:calc(100vh - 255px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:2px;padding-right:2px}
   .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
   .search:focus{border-color:var(--brand)}
+  .gtabs{display:flex;gap:7px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .gtabs::-webkit-scrollbar{display:none}
+  .gt{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;
+    padding:6px 14px;font-size:12.5px;font-family:inherit;cursor:pointer}
+  .gt.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  .gt-add{flex:0 0 auto;width:31px;height:31px;border-radius:50%;border:1px dashed var(--line);
+    background:var(--surface);color:var(--ink-3);font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
 
   .form-row{margin-bottom:16px}
   .form-row label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:7px;font-weight:500}
@@ -193,6 +200,11 @@
   .cf-check input{width:18px;height:18px;accent-color:var(--danger);flex:none;margin:0}
   .modal-btns{display:flex;gap:10px}
   .modal-btns .btn{flex:1}
+  #newGroupName{margin-bottom:8px;text-align:left}
+  .group-del-list{margin:2px 0 16px;max-height:132px;overflow-y:auto;text-align:left}
+  .group-del-row{display:flex;align-items:center;justify-content:space-between;padding:7px 2px;
+    border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+  .group-del-row button{border:none;background:none;color:var(--danger);font-size:17px;cursor:pointer;padding:2px 7px;font-family:inherit}
   .btn-danger-solid{background:var(--danger);color:#fff}
   .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
   .adv{margin-top:12px}
@@ -244,6 +256,19 @@
     </div>
   </div>
 </div>
+<div class="modal-mask" id="groupMask">
+  <div class="modal">
+    <div class="modal-icon" style="background:var(--brand-soft);color:var(--brand)">＋</div>
+    <div class="modal-title">自定义分组</div>
+    <input class="inp" id="newGroupName" placeholder="输入分组名，比如：凉菜" maxlength="12">
+    <div class="hint" id="groupMsg" style="text-align:left;margin:0 0 10px"></div>
+    <div class="group-del-list" id="groupDelList"></div>
+    <div class="modal-btns">
+      <button class="btn btn-soft" data-act="groupClose">关闭</button>
+      <button class="btn btn-solid" data-act="groupCreate">添加分组</button>
+    </div>
+  </div>
+</div>
 <div class="sheet-mask" id="sheetMask">
   <div class="sheet">
     <button class="opt" data-act="photoCam">拍照</button>
@@ -262,7 +287,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.16';
+var APP_VERSION='1.2.17';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -389,6 +414,17 @@ function imgsOf(l){if(!l)return[];if(Array.isArray(l.images))return l.images.fil
 function splitIngs(text){return String(text||'').split(/[,，、;；\n\r\t ]+/).map(function(s){return s.trim();}).filter(Boolean);}
 
 /* ---------- 今天这顿：采购清单（只存菜名，轻量，localStorage） ---------- */
+var GROUPS_KEY='cooklog_groups_v1',GROUP_CUR_KEY='cooklog_group_cur_v1';
+var DEFAULT_GROUPS=['荤菜','素菜','汤'];
+var groups=(function(){
+  try{
+    var a=JSON.parse(localStorage.getItem(GROUPS_KEY));
+    if(Array.isArray(a))return a.filter(function(x){return typeof x==='string'&&!!x&&x!=='全部'&&x!=='未分组';});
+  }catch(e){}
+  return DEFAULT_GROUPS.slice();
+})();
+function saveGroups(){try{localStorage.setItem(GROUPS_KEY,JSON.stringify(groups));}catch(e){}}
+function allGroupNames(){return ['全部'].concat(groups,['未分组']);}
 var PICKS_KEY='cooklog_picks_v1';
 var picks=(function(){
   try{var a=JSON.parse(localStorage.getItem(PICKS_KEY)||'[]');return Array.isArray(a)?a.filter(function(x){return typeof x==='string'&&x;}):[];}
@@ -439,6 +475,51 @@ function askConfirm(opt,cb){
 }
 function closeConfirm(){document.getElementById('confirmMask').classList.remove('show');confirmCb=null;}
 function closeSheet(){document.getElementById('sheetMask').classList.remove('show');}
+
+/* ---------- 分组管理 ---------- */
+function openGroupModal(){
+  document.getElementById('newGroupName').value='';
+  document.getElementById('groupMsg').textContent='';
+  drawGroupDelList();
+  document.getElementById('groupMask').classList.add('show');
+  setTimeout(function(){document.getElementById('newGroupName').focus();},80);
+}
+function closeGroupModal(){document.getElementById('groupMask').classList.remove('show');}
+function drawGroupDelList(){
+  var box=document.getElementById('groupDelList');
+  var custom=groups.filter(function(g){return DEFAULT_GROUPS.indexOf(g)<0;});
+  box.innerHTML=custom.length?custom.map(function(g){
+    return '<div class="group-del-row"><span>'+esc(g)+'</span><button data-act="groupDel" data-g="'+esc(g)+'" title="删除分组">×</button></div>';
+  }).join(''):'<div class="hint" style="margin:0">还没有自定义分组</div>';
+}
+function createGroup(){
+  var el=document.getElementById('newGroupName'),name=el.value.trim().replace(/\s+/g,' ');
+  var msg=document.getElementById('groupMsg');
+  if(!name){msg.textContent='先输入分组名';return;}
+  if(name.length>12){msg.textContent='分组名最多 12 个字';return;}
+  if(allGroupNames().indexOf(name)>=0){msg.textContent='已经有这个分组了';return;}
+  groups.push(name);saveGroups();closeGroupModal();switchGroup(name);
+  toast('已新建分组「'+name+'」');
+}
+function removeGroup(name){
+  if(DEFAULT_GROUPS.indexOf(name)<0){
+    groups=groups.filter(function(g){return g!==name;});saveGroups();
+    var affected=state.logs.filter(function(l){return l.group===name;});
+    affected.forEach(function(l){l.group='';});
+    if(affected.length)Promise.all(affected.map(function(l){return Store.save(l);})).catch(function(){});
+    if(state.group===name){state.group='未分组';try{localStorage.setItem(GROUP_CUR_KEY,'未分组');}catch(e){}}
+    drawGroupDelList();
+    var t=document.getElementById('gtabs');if(t)t.innerHTML=groupTabsHtml();
+    refreshMine();
+    toast(affected.length?'分组已删除，'+affected.length+' 条记录移到未分组':'分组已删除');
+  }
+}
+document.getElementById('groupMask').addEventListener('click',function(e){
+  if(e.target===this)closeGroupModal();
+});
+document.getElementById('newGroupName').addEventListener('keydown',function(e){
+  if(e.key==='Enter')createGroup();
+});
 
 /* ---------- 图片查看 ---------- */
 var viewerList=[],viewerIdx=0;
@@ -522,15 +603,16 @@ function ph(imgs,cls){
 }
 
 /* ---------- 状态 ---------- */
-var state={view:'today',logs:[],search:'',detailDish:'',form:null,formBack:'today',batch:null,batchExclude:[]};
+var state={view:'today',logs:[],search:'',detailDish:'',form:null,formBack:'today',batch:null,batchExclude:[],
+  group:(function(){try{var g=localStorage.getItem(GROUP_CUR_KEY);if(g&&allGroupNames().indexOf(g)>=0)return g;}catch(e){}return '全部';})()};
 
 function byDish(){
   var m={};
   state.logs.forEach(function(l){
     var k=l.dish;
-    if(!m[k])m[k]={dish:k,count:0,last:0,lastLog:null,images:[],ings:''};
+    if(!m[k])m[k]={dish:k,count:0,last:0,lastLog:null,images:[],ings:'',g:''};
     var d=m[k];d.count++;
-    if(l.date>d.last){d.last=l.date;d.lastLog=l;}
+    if(l.date>d.last){d.last=l.date;d.lastLog=l;d.g=l.group||'';}
     imgsOf(l).forEach(function(im){if(d.images.indexOf(im)<0)d.images.push(im);});
     if(l.ingredients&&d.ings.indexOf(l.ingredients)<0)d.ings+=(d.ings?' ':'')+l.ingredients;
   });
@@ -624,15 +706,31 @@ function vToday(){
 }
 function vMine(){
   return '<input class="search" id="search" placeholder="搜索菜名或配料，比如：鸡" value="'+esc(state.search)+'" autocomplete="off">'+
+    '<div class="gtabs" id="gtabs">'+groupTabsHtml()+'</div>'+
     '<div class="mine-scroll" id="mineWrap">'+mineBody()+'</div>';
+}
+function groupTabsHtml(){
+  return allGroupNames().map(function(g){
+    return '<button class="gt'+(state.group===g?' on':'')+'" data-act="group" data-g="'+esc(g)+'">'+esc(g)+'</button>';
+  }).join('')+'<button class="gt-add" data-act="groupAdd" title="管理分组">＋</button>';
+}
+function switchGroup(g){
+  if(allGroupNames().indexOf(g)<0)return;
+  state.group=g;state.search='';
+  try{localStorage.setItem(GROUP_CUR_KEY,g);}catch(e){}
+  var t=document.getElementById('gtabs');if(t)t.innerHTML=groupTabsHtml();
+  var s=document.getElementById('search');if(s)s.value='';
+  refreshMine();
 }
 function mineBody(){
   var ds=byDish(),q=state.search.trim().toLowerCase();
+  if(state.group==='未分组')ds=ds.filter(function(d){return !d.g;});
+  else if(state.group!=='全部')ds=ds.filter(function(d){return d.g===state.group;});
   if(q)ds=ds.filter(function(d){
     return d.dish.toLowerCase().indexOf(q)>=0||d.ings.toLowerCase().indexOf(q)>=0;
   });
   var h='<div class="sec-title">我的菜 <small>'+ds.length+' 种</small></div>';
-  if(!ds.length)return h+'<div class="empty">'+UI.grid+'<p>'+(q?'没找到相关配料或菜名':'还没有记录')+'</p></div>';
+  if(!ds.length)return h+'<div class="empty">'+UI.grid+'<p>'+(q?'没找到相关配料或菜名':(state.group==='全部'?'还没有记录':'这个分组还没有菜'))+'</p></div>';
   h+='<div class="grid">';
   ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div></div></div>';});
   return h+'</div>';
@@ -757,6 +855,9 @@ function vForm(){
   var f=state.form;
   var h='<div class="card">';
   h+='<div class="form-row"><label>菜名</label><input class="inp" id="f_dish" placeholder="比如：番茄炒蛋" value="'+esc(f.dish)+'"></div>';
+  h+='<div class="form-row"><label>分组</label><select class="inp" id="f_group">'+
+    groups.map(function(g){return '<option value="'+esc(g)+'"'+(f.group===g?' selected':'')+'>'+esc(g)+'</option>';}).join('')+
+    '<option value=""'+(f.group?'':' selected')+'>未分组</option></select></div>';
   h+='<div class="form-row"><label>成品菜图 <span style="color:var(--ink-3);font-weight:400">（可多张，最多 9 张）</span></label><div class="photos" id="f_photos">'+
     f.images.map(function(im,i){return '<div class="photo-item"><img src="'+im+'" alt=""><button class="rm" data-act="rmphoto" data-i="'+i+'">×</button></div>';}).join('')+
     '<div class="photo-add" data-act="photo">+<span>添加图片</span></div></div>'+
@@ -1050,6 +1151,7 @@ function openForm(dish,editId){
     id:base&&editId?base.id:uid(),
     isNew:!editId,
     dish:base?base.dish:(dish||''),
+    group:base?(base.group||''):(state.group!=='全部'&&state.group!=='未分组'?state.group:''),
     images:base?imgsOf(base).slice():[],
     ingredients:base?base.ingredients:'',
     steps:base?base.steps:'',
@@ -1062,6 +1164,7 @@ function openForm(dish,editId){
 function collectForm(){
   var f=state.form;
   f.dish=document.getElementById('f_dish').value.trim();
+  f.group=document.getElementById('f_group').value;
   f.ingredients=document.getElementById('f_ing').value.trim();
   f.steps=document.getElementById('f_steps').value.trim();
   f.date=document.getElementById('f_date').value;
@@ -1106,7 +1209,7 @@ function doExport(withImage){
 function persistLog(id){
   var f=state.form;if(!f)return;
   var rec={id:id||f.id||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)),
-    dish:f.dish,images:f.images.slice(),
+    dish:f.dish,group:f.group||'',images:f.images.slice(),
     ingredients:f.ingredients,steps:f.steps,date:new Date(f.date+'T12:00:00').getTime()};
   Store.save(rec).then(function(){
     var found=false;state.logs=state.logs.map(function(l){if(l.id===rec.id){found=true;return rec;}return l;});
@@ -1179,6 +1282,11 @@ document.addEventListener('click',function(e){
       },1800);
     });
   }
+  else if(act==='group'){switchGroup(el.getAttribute('data-g'));}
+  else if(act==='groupAdd'){openGroupModal();}
+  else if(act==='groupClose'){closeGroupModal();}
+  else if(act==='groupCreate'){createGroup();}
+  else if(act==='groupDel'){removeGroup(el.getAttribute('data-g'));}
   else if(act==='detail'){if(speak.playing)speakStop();state.detailDish=el.getAttribute('data-dish');state.view='detail';render();}
   else if(act==='speak'){if(speak.playing)speakStop();else speakStart();}
   else if(act==='speakRate'){
@@ -1298,6 +1406,23 @@ document.getElementById('jsonIn').addEventListener('change',function(e){
   };
   fr.readAsText(file);e.target.value='';
 });
+
+/* 我的菜：在列表区左右滑动切分组 */
+var tgX=0,tgY=0;
+app.addEventListener('touchstart',function(e){
+  if(state.view!=='mine'||e.touches.length!==1)return;
+  var w=document.getElementById('mineWrap');
+  if(!w||!w.contains(e.target))return;
+  tgX=e.touches[0].clientX;tgY=e.touches[0].clientY;
+},{passive:true});
+app.addEventListener('touchend',function(e){
+  if(state.view!=='mine'||!tgX)return;
+  var t=e.changedTouches[0],dx=t.clientX-tgX,dy=t.clientY-tgY;tgX=0;
+  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.4)return;
+  var all=allGroupNames(),i=all.indexOf(state.group);if(i<0)i=0;
+  var ni=dx<0?i+1:i-1;
+  if(ni>=0&&ni<all.length)switchGroup(all[ni]);
+},{passive:true});
 
 var composing=false;
 app.addEventListener('compositionstart',function(e){if(e.target.id==='search')composing=true;});
