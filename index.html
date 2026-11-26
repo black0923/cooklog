@@ -10,7 +10,7 @@
     --bg:#f7f4ee; --surface:#ffffff; --surface-2:#fbf9f5;
     --ink:#2a2420; --ink-2:#6f665e; --ink-3:#a1988d;
     --line:#e9e2d7; --brand:#c85b3c; --brand-soft:#fbeae2;
-    --star:#e3a13a; --danger:#c0392b;
+    --danger:#c0392b;
     --r:16px; --sh:0 4px 20px rgba(80,55,35,.06);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -31,7 +31,6 @@
   .hero .label{font-size:12px;opacity:.85;letter-spacing:1px}
   .hero .dish{font-size:30px;font-weight:700;margin:8px 0 6px;line-height:1.2}
   .hero .meta{font-size:13px;opacity:.9;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .hero .stars{color:#ffe0a8}
   .hero .ph{margin:16px -22px 0;height:180px;background:rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
   .hero .ph img{width:100%;height:100%;object-fit:cover;display:block}
   .hero .ph svg{width:56px;height:56px;opacity:.4}
@@ -60,11 +59,8 @@
   .dishcard .ph{aspect-ratio:1;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
   .dishcard .ph svg{width:30px;height:30px;opacity:.4}
   .dishcard .ph img{width:100%;height:100%;object-fit:cover}
-  .dishcard .info{padding:7px 8px 8px}
+  .dishcard .info{padding:9px 8px 10px}
   .dishcard .nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dishcard .row{display:flex;justify-content:space-between;align-items:center;margin-top:2px;font-size:10px;color:var(--ink-3)}
-  .dishcard .stars{font-size:11px;letter-spacing:0}
-  .stars{color:var(--star);letter-spacing:1px;font-size:12px}
   .mine-scroll{height:calc(100vh - 210px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:8px;padding-right:2px}
   .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
   .search:focus{border-color:var(--brand)}
@@ -74,9 +70,6 @@
   .inp,.ta{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:15px;font-family:inherit;background:var(--surface-2);color:var(--ink);outline:none}
   .inp:focus,.ta:focus{border-color:var(--brand);background:#fff}
   .ta{resize:vertical;min-height:76px;line-height:1.6}
-  .star-pick{display:flex;gap:6px}
-  .star-pick span{font-size:32px;color:var(--line);cursor:pointer;line-height:1;transition:color .1s}
-  .star-pick span.on{color:var(--star)}
   .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .photo-item{position:relative;aspect-ratio:1;border-radius:11px;overflow:hidden;background:var(--surface-2)}
   .photo-item img{width:100%;height:100%;object-fit:cover;display:block}
@@ -269,7 +262,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.15';
+var APP_VERSION='1.2.16';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -391,7 +384,6 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function fmtDate(ts){var d=new Date(ts);return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();}
 function fmtInputDate(ts){var d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function starStr(n){var s='';for(var i=1;i<=5;i++)s+=i<=n?'★':'☆';return s;}
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2000);}
 function imgsOf(l){if(!l)return[];if(Array.isArray(l.images))return l.images.filter(Boolean);return l.image?[l.image]:[];}
 function splitIngs(text){return String(text||'').split(/[,，、;；\n\r\t ]+/).map(function(s){return s.trim();}).filter(Boolean);}
@@ -536,20 +528,17 @@ function byDish(){
   var m={};
   state.logs.forEach(function(l){
     var k=l.dish;
-    if(!m[k])m[k]={dish:k,best:0,count:0,last:0,lastLog:null,images:[],ings:''};
+    if(!m[k])m[k]={dish:k,count:0,last:0,lastLog:null,images:[],ings:''};
     var d=m[k];d.count++;
-    if(l.rating>d.best)d.best=l.rating;
     if(l.date>d.last){d.last=l.date;d.lastLog=l;}
     imgsOf(l).forEach(function(im){if(d.images.indexOf(im)<0)d.images.push(im);});
     if(l.ingredients&&d.ings.indexOf(l.ingredients)<0)d.ings+=(d.ings?' ':'')+l.ingredients;
   });
   return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.last-a.last;});
 }
-/* 按评分加权抽一批（不放回），尽量避开刚看过的那批 */
+/* 随机抽一批（不放回），尽量避开刚看过的那批 */
 function pickBatch(n,exclude){
-  var ds=byDish();if(!ds.length)return [];
-  var hi=ds.filter(function(d){return d.best>=4;});
-  var pool=hi.length>=Math.min(2,ds.length)?hi:ds;
+  var pool=byDish();if(!pool.length)return [];
   var ex={};(exclude||[]).forEach(function(x){ex[x]=1;});
   var out=[],used={};
   n=Math.min(n,pool.length);
@@ -558,9 +547,7 @@ function pickBatch(n,exclude){
     if(!cand.length)break;
     var fresh=cand.filter(function(d){return !ex[d.dish];});
     var src=fresh.length?fresh:cand;
-    var total=0;src.forEach(function(d){total+=Math.pow(d.best,3);});
-    var r=Math.random()*total,pick=src[src.length-1];
-    for(var i=0;i<src.length;i++){r-=Math.pow(src[i].best,3);if(r<=0){pick=src[i];break;}}
+    var pick=src[Math.floor(Math.random()*src.length)];
     used[pick.dish]=1;out.push(pick);
   }
   return out;
@@ -625,7 +612,7 @@ function vToday(){
   list.forEach(function(d){
     h+='<div class="reco-item" data-act="detail" data-dish="'+esc(d.dish)+'">'+
       ph(d.images,'ph')+
-      '<div class="ri"><div class="nm">'+esc(d.dish)+'</div><div class="stars">'+starStr(d.best)+'</div>'+
+      '<div class="ri"><div class="nm">'+esc(d.dish)+'</div>'+
       (d.lastLog?ingTags(d.lastLog.ingredients):'')+'</div></div>';
   });
   h+='</div>';
@@ -647,7 +634,7 @@ function mineBody(){
   var h='<div class="sec-title">我的菜 <small>'+ds.length+' 种</small></div>';
   if(!ds.length)return h+'<div class="empty">'+UI.grid+'<p>'+(q?'没找到相关配料或菜名':'还没有记录')+'</p></div>';
   h+='<div class="grid">';
-  ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div><div class="row"><span class="stars">'+starStr(d.best)+'</span></div></div></div>';});
+  ds.forEach(function(d){h+='<div class="dishcard" data-act="detail" data-dish="'+esc(d.dish)+'">'+ph(d.images,'ph')+'<div class="info"><div class="nm">'+esc(d.dish)+'</div></div></div>';});
   return h+'</div>';
 }
 /* ---------- 步骤朗读（原生 TextToSpeech 优先，浏览器兜底，逐条高亮） ---------- */
@@ -741,11 +728,10 @@ function speakStart(){
 function vDetail(){
   var d=state.detailDish,logs=state.logs.filter(function(l){return l.dish===d;}).sort(function(a,b){return b.date-a.date;});
   if(!logs.length)return '<div class="empty">'+UI.grid+'<p>这道菜的记录已删除</p></div>';
-  var cur=logs[0],best=Math.max.apply(null,logs.map(function(l){return l.rating;})),imgs=imgsOf(cur);
+  var cur=logs[0],imgs=imgsOf(cur);
   var h='<button class="btn btn-soft" data-act="go" data-v="mine" style="margin-bottom:14px">← 返回我的菜</button>';
   h+='<div class="card"><div style="font-size:24px;font-weight:700">'+esc(d)+'</div>'+
-    '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stars">'+starStr(best)+'</span>'+
-    '<span style="color:var(--ink-3);font-size:12px">记录于 '+fmtDate(cur.date)+'</span></div>'+
+    '<div style="color:var(--ink-3);font-size:12px;margin-top:6px">记录于 '+fmtDate(cur.date)+'</div>'+
     (imgs.length?'<div class="det-imgs">'+imgs.map(function(im){return '<img src="'+im+'" alt="" data-act="viewimg">';}).join('')+'</div>':'')+
     (cur.ingredients?'<div class="sub-title">配料</div>'+ingTags(cur.ingredients):'')+
     (cur.steps?stepsBlock(cur.steps):'')+
@@ -759,7 +745,7 @@ function vDetail(){
     h+='<div class="sec-title">更早的记录 <small>'+(logs.length-1)+' 条</small></div><div class="tl">';
     logs.slice(1).forEach(function(l){
       var li=imgsOf(l);
-      h+='<div class="ev"><div class="d">'+fmtDate(l.date)+' · '+starStr(l.rating)+'</div>'+
+      h+='<div class="ev"><div class="d">'+fmtDate(l.date)+'</div>'+
         (li.length?'<div class="imgs">'+li.map(function(im){return '<img src="'+im+'" alt="" data-act="viewimg">';}).join('')+'</div>':'')+
         '<div class="ev-btns"><button class="btn btn-danger" data-act="del" data-id="'+l.id+'">删除</button><button class="btn btn-soft" data-act="edit" data-id="'+l.id+'">编辑</button></div></div>';
     });
@@ -771,7 +757,6 @@ function vForm(){
   var f=state.form;
   var h='<div class="card">';
   h+='<div class="form-row"><label>菜名</label><input class="inp" id="f_dish" placeholder="比如：番茄炒蛋" value="'+esc(f.dish)+'"></div>';
-  h+='<div class="form-row"><label>这次做得怎么样</label><div class="star-pick" id="f_stars">'+[1,2,3,4,5].map(function(i){return '<span data-act="star" data-n="'+i+'" class="'+(i<=f.rating?'on':'')+'">★</span>';}).join('')+'</div></div>';
   h+='<div class="form-row"><label>成品菜图 <span style="color:var(--ink-3);font-weight:400">（可多张，最多 9 张）</span></label><div class="photos" id="f_photos">'+
     f.images.map(function(im,i){return '<div class="photo-item"><img src="'+im+'" alt=""><button class="rm" data-act="rmphoto" data-i="'+i+'">×</button></div>';}).join('')+
     '<div class="photo-add" data-act="photo">+<span>添加图片</span></div></div>'+
@@ -784,17 +769,16 @@ function vForm(){
 }
 function vReview(){
   var logs=state.logs,ds=byDish();
-  var avg=logs.length?(logs.reduce(function(s,l){return s+l.rating;},0)/logs.length).toFixed(1):'—';
-  var five=ds.filter(function(d){return d.best>=5;}).length;
+  var pics=logs.reduce(function(s,l){return s+imgsOf(l).length;},0);
   var h='<div class="card"><div class="sec-title" style="margin-top:0">厨房统计</div><div class="stats">'+
     '<div class="s"><div class="v">'+ds.length+'</div><div class="k">菜品种类</div></div>'+
-    '<div class="s"><div class="v">'+avg+'</div><div class="k">平均评分</div></div>'+
-    '<div class="s"><div class="v">'+five+'</div><div class="k">五星拿手菜</div></div></div>'+
+    '<div class="s"><div class="v">'+logs.length+'</div><div class="k">累计记录</div></div>'+
+    '<div class="s"><div class="v">'+pics+'</div><div class="k">照片张数</div></div></div>'+
     '<div class="hint" style="margin-top:14px;text-align:center">照片占用约 '+sizeText(photoBytes())+' · 全部存在本机</div></div>';
-  var top=ds.slice().sort(function(a,b){return b.best-a.best||b.last-a.last;}).slice(0,5);
-  h+='<div class="sec-title">我的拿手菜</div><div class="card">';
+  var top=ds.slice().sort(function(a,b){return b.count-a.count||b.last-a.last;}).slice(0,5);
+  h+='<div class="sec-title">常做的菜</div><div class="card">';
   if(!top.length)h+='<div style="color:var(--ink-3);font-size:13px">还没有数据</div>';
-  top.forEach(function(d,i){h+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><span>'+(i+1)+'. '+esc(d.dish)+'</span><span class="stars">'+starStr(d.best)+'</span></div>';});
+  top.forEach(function(d,i){h+='<div style="padding:8px 0;border-bottom:1px solid var(--line)">'+(i+1)+'. '+esc(d.dish)+'</div>';});
   h+='</div>';
   h+='<div class="sec-title">数据备份</div><div class="card"><div style="font-size:13px;color:var(--ink-2);margin-bottom:12px">数据只在这台设备上。换机或清缓存前记得导出。可导出<b>含图片</b>或<b>仅文字</b>两种备份。</div>'+
     '<div class="hero-btns"><button class="btn btn-soft" data-act="import">导入备份</button><button class="btn btn-solid" data-act="export">导出含图</button></div>'+
@@ -922,7 +906,7 @@ function startShare(){
   var tasks=ds.map(function(d){
     var src=imgsOf(d.lastLog)[0]||d.images[0]||'';
     return thumbOf(src).then(function(t){
-      return {name:d.dish,rating:d.best,ings:(d.ings||'').slice(0,60),thumb:t};
+      return {name:d.dish,ings:(d.ings||'').slice(0,60),thumb:t};
     });
   });
   /* 好友端页面一并交给原生，热更新后也能跟着换新 */
@@ -1066,7 +1050,6 @@ function openForm(dish,editId){
     id:base&&editId?base.id:uid(),
     isNew:!editId,
     dish:base?base.dish:(dish||''),
-    rating:base?base.rating:0,
     images:base?imgsOf(base).slice():[],
     ingredients:base?base.ingredients:'',
     steps:base?base.steps:'',
@@ -1123,7 +1106,7 @@ function doExport(withImage){
 function persistLog(id){
   var f=state.form;if(!f)return;
   var rec={id:id||f.id||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)),
-    dish:f.dish,rating:f.rating,images:f.images.slice(),
+    dish:f.dish,images:f.images.slice(),
     ingredients:f.ingredients,steps:f.steps,date:new Date(f.date+'T12:00:00').getTime()};
   Store.save(rec).then(function(){
     var found=false;state.logs=state.logs.map(function(l){if(l.id===rec.id){found=true;return rec;}return l;});
@@ -1204,11 +1187,6 @@ document.addEventListener('click',function(e){
     if(el)el.textContent=nr.n;
     toast('语速：'+nr.n);
   }
-  else if(act==='star'){
-    var n=+el.getAttribute('data-n');state.form.rating=n;
-    var spans=document.querySelectorAll('#f_stars span');
-    for(var i=0;i<spans.length;i++)spans[i].classList.toggle('on',i<n);
-  }
   else if(act==='photo'){document.getElementById('sheetMask').classList.add('show');}
   else if(act==='photoCam'){closeSheet();document.getElementById('camIn').click();}
   else if(act==='photoAlbum'){closeSheet();document.getElementById('fileIn').click();}
@@ -1221,7 +1199,6 @@ document.addEventListener('click',function(e){
   else if(act==='save'){
     collectForm();var f=state.form;
     if(!f.dish){toast('先写上菜名');return;}
-    if(!f.rating){toast('给这次打个分吧');return;}
     if(f.isNew){
       var dup=state.logs.filter(function(l){return l.dish===f.dish;})[0];
       if(dup){

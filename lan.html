@@ -10,7 +10,6 @@
     --bg:#f7f4ee; --surface:#fff; --surface-2:#fbf9f5;
     --ink:#2a2420; --ink-2:#6f665e; --ink-3:#a1988d;
     --line:#e9e2d7; --brand:#c85b3c; --brand-soft:#fbeae2;
-    --star:#e3a13a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -36,7 +35,6 @@
   .d .bd{flex:1;min-width:0;padding:3px 2px 3px 0}
   .d .nm{font-size:16px;font-weight:600;line-height:1.35;padding-right:22px;
     overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-  .d .st{color:var(--star);font-size:12px;letter-spacing:1px;margin-top:2px}
   .d .ig{font-size:11.5px;color:var(--ink-3);margin-top:5px;
     overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .tick{position:absolute;right:9px;top:9px;width:21px;height:21px;border-radius:50%;
@@ -109,11 +107,6 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function stars(n) {
-    var s = '';
-    for (var i = 1; i <= 5; i++) s += i <= n ? '★' : '☆';
-    return s;
-  }
   function plateSvg() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>';
   }
@@ -125,13 +118,12 @@
       document.getElementById('sub').textContent = '';
       return;
     }
-    document.getElementById('sub').textContent = '他这里有 ' + dishes.length + ' 道拿手菜，选好点下面';
+    document.getElementById('sub').textContent = '他这里有 ' + dishes.length + ' 道菜，选好点下面';
     var h = '';
     dishes.forEach(function (d, i) {
       h += '<div class="d' + (chosen[i] ? ' on' : '') + '" data-i="' + i + '">' +
         '<div class="pic">' + (d.hasImg ? '<img src="' + BASE + 'img/' + i + '" alt="" loading="lazy">' : plateSvg()) + '</div>' +
         '<div class="bd"><div class="nm">' + esc(d.name) + '</div>' +
-        (d.rating ? '<div class="st">' + stars(d.rating) + '</div>' : '') +
         (d.ings ? '<div class="ig">' + esc(d.ings) + '</div>' : '') + '</div>' +
         '<div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.2 5.2L20 6.6"/></svg></div>' +
         '</div>';
