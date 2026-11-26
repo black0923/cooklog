@@ -125,7 +125,7 @@ node scripts/build-bundle.js 1.2.3   # 出 dist/cooklog-1.2.3.zip + dist/update.
 10. **`gradlew` 必须是 LF 换行**（`.gitattributes` 已固定），否则在 Linux/macOS 上执行报 `\r` 错误。
 11. **图标前景层必须真透明。** headless Chrome 截图只给 `omitBackground` 仍会画白底，要同时 `Emulation.setDefaultBackgroundColorOverride(a=0)`，否则自适应图标整块变白。
 12. **Android 9+ 默认禁止明文 HTTP。** 局域网共选的自检走 `HttpURLConnection` 访问 `http://127.0.0.1`，没有 `network_security_config.xml` 就会报 `Cleartext HTTP traffic to 127.0.0.1 not permitted`。现在 `res/xml/network_security_config.xml` 只对 `127.0.0.1` / `localhost` 放开，其余仍禁止。
-13. **AI 不依赖自建服务器。** 智谱接口没有 CORS 头，WebView 直连会被拦，所以由 APK 内的 `AiPlugin` 用 Java 发请求直连智谱，Key 由本机 `ai-key.local` 在构建时注入（该文件与生成的 `AiKey.java` 都在 `.gitignore` 里，不进 GitHub、不进热更 zip）。之前在 `ncbky.xyz` 上加过的 `/cooklog/ai` 反向代理只是短期调试，现已移除；服务器到期后，菜谱数据、局域网共选、AI 识别都不受影响，只有「检查更新」需要换托管地址。只有「自动识别配料」这一步需要联网，其余功能仍然纯离线。
+13. **AI 不依赖自建服务器。** 智谱接口没有 CORS 头，WebView 直连会被拦，所以由 APK 内的 `AiPlugin` 用 Java 发请求直连智谱，Key 由本机 `ai-key.local` 在构建时注入（该文件与生成的 `AiKey.java` 都在 `.gitignore` 里，不进 GitHub、不进热更 zip）。之前在 `ncbky.xyz` 上加过的 `/cooklog/ai` 反向代理只是短期调试，现已移除；服务器到期后，菜谱数据、局域网共选、AI 识别都不受影响，只有「检查更新」需要换托管地址。只有「自动识别配料」这一步需要联网，其余功能仍然纯离线。提示词明确排除水类液体（含香菇水、葱姜水等一切以「水」结尾的词）；旧安装包由热更在请求文本里补同一条规则，前端只保留「以水结尾」的兜底过滤。
 
 ## 数据
 

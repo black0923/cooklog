@@ -307,7 +307,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.2.19';
+var APP_VERSION='1.2.20';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -432,9 +432,7 @@ function fmtInputDate(ts){var d=new Date(ts);return d.getFullYear()+'-'+String(d
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2000);}
 function imgsOf(l){if(!l)return[];if(Array.isArray(l.images))return l.images.filter(Boolean);return l.image?[l.image]:[];}
 function splitIngs(text){return String(text||'').split(/[,，、;；\n\r\t ]+/).map(function(s){return s.trim();}).filter(Boolean);}
-/* AI 常把「热水 / 清水 / 适量温水」当成配料，回填前过滤掉 */
-var WATER_WORDS=['水','清水','热水','开水','温水','冷水','凉水','冰水','沸水','凉白开','白开水',
-  '纯净水','矿泉水','蒸馏水','自来水','饮用水'];
+/* 提示词已明确排除水类；这里只做通用兜底：任何以「水」结尾的词都不回填 */
 function isWaterIng(n){
   var s=String(n||'').replace(/[\s　]/g,'').replace(/[（(][^）)]*[）)]/g,'');
   if(!s)return true;
@@ -442,7 +440,7 @@ function isWaterIng(n){
   s=s.replace(/^[0-9一二三四五六七八九十半两]+(杯|碗|勺|毫升|ml|升|滴)?/i,'');
   s=s.replace(/(适量|少许|若干|即可)$/,'');
   s=s.replace(/[0-9一二三四五六七八九十半两]+(杯|碗|勺|毫升|ml|升|滴)?$/i,'');
-  return WATER_WORDS.indexOf(s)>=0;
+  return s==='凉白开'||/水$/.test(s);
 }
 
 /* ---------- 今天这顿：采购清单（只存菜名，轻量，localStorage） ---------- */
@@ -983,12 +981,15 @@ function aiPlugin(){
     return window.Ai||null;
   }catch(e){return null;}
 }
+var AI_WATER_RULE='只提取真正吃进去的食材。任何水类液体都不是食材，绝对不要输出，'+
+  '包括热水、清水、开水、温水、冷水、凉白开，以及香菇水、葱姜水、花椒水等所有以「水」结尾的液体。';
 function aiExtract(text){
   /* AI 只走 APK 内的原生通道直连智谱，不依赖任何自建服务器。
      ncbky.xyz 上的代理只是短期热更调试用，服务器到期后本功能不受影响。 */
   var P=aiPlugin();
   if(!P)return Promise.reject(new Error('当前安装包不支持 AI 识别'));
-  return Promise.resolve(P.extractIngredients({text:text})).then(function(r){
+  /* 老安装包的 system 提示词还没更新，把同一条规则随请求文本下发；热更即可生效 */
+  return Promise.resolve(P.extractIngredients({text:AI_WATER_RULE+'\n\n'+text})).then(function(r){
     var items=(r&&r.items)||[];
     if(!items.length)throw new Error('没解析出配料');
     return {items:items};
