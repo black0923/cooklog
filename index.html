@@ -67,7 +67,15 @@
   .pick-mini{flex:0 0 auto;margin-top:3px;border:1px solid var(--brand);border-radius:999px;background:var(--brand);color:#fff;
     font-family:inherit;font-size:11.5px;font-weight:600;padding:5px 10px;cursor:pointer;line-height:1.3}
   .pick-mini.on{background:var(--surface);color:var(--brand)}
-  .mine-scroll{height:calc(100vh - 163px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:2px;padding-right:2px}
+  /* 我的菜：整页锁定一屏，只有菜品列表盒子滚动，不再出现整体滚动条 */
+  body.mine-mode .phone{height:100vh;min-height:0;padding-bottom:0;overflow:hidden}
+  body.mine-mode .content{height:100%;display:flex;flex-direction:column;padding-bottom:0;overflow:hidden}
+  body.mine-mode .content>.search,
+  body.mine-mode .content>.gtabs,
+  body.mine-mode .content>.multi-bar{flex:0 0 auto}
+  .mine-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    margin:2px 0 calc(74px + env(safe-area-inset-bottom));padding-right:2px}
+  body.mine-mode .mine-scroll{flex:1 1 auto;min-height:0}
   .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-family:inherit;outline:none}
   .search:focus{border-color:var(--brand)}
   .gtabs{display:flex;gap:7px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -243,7 +251,8 @@
   .sheet button:active{background:var(--surface-2)}
   .sheet .opt{border-bottom:1px solid var(--line);border-radius:0}
   .sheet .cs{color:var(--ink-3);font-size:15px;border-radius:0;margin-top:4px;padding-top:16px;border-top:1px solid var(--line)}
-  @media(min-width:520px){.phone{margin:14px auto;border-radius:24px;min-height:calc(100vh - 28px)}}
+  @media(min-width:520px){.phone{margin:14px auto;border-radius:24px;min-height:calc(100vh - 28px)}
+    body.mine-mode .phone{height:calc(100vh - 28px);margin:14px auto;border-radius:24px}}
 </style>
 </head>
 <body>
@@ -303,7 +312,7 @@
 (function(){
 'use strict';
 
-var APP_VERSION='1.3.5';
+var APP_VERSION='1.3.6';
 var UPDATE_URL_KEY='cooklog_update_url_v1';
 /* 内置更新地址：热更包放在这里，用户无需填写。换托管时只改这一行。 */
 var DEFAULT_UPDATE_URL='https://ncbky.xyz/cooklog';
@@ -843,6 +852,7 @@ var VIEWS={today:vToday,mine:vMine,detail:vDetail,form:vForm,review:vReview,shar
 function render(){
   if(multi.on&&state.view!=='mine'){multi.on=false;multi.sel={};}
   if(speak.playing&&state.view!=='detail')speakStop();
+  document.body.classList.toggle('mine-mode',state.view==='mine');
   app.innerHTML=(VIEWS[state.view]||vToday)();
   renderTabs();
   if(state.view==='today'&&state.logs.length)setTimeout(ensureReco,0);
