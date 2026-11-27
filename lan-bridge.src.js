@@ -6,6 +6,7 @@ window.LanShare = registerPlugin('LanShare');
 window.Backup = registerPlugin('Backup');
 window.Ai = registerPlugin('Ai');
 window.Tts = registerPlugin('Tts');
+window.App = registerPlugin('App');
 
 function hasPlugin(name) {
   try {

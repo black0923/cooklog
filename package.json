@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.2",
     "@capgo/capacitor-updater": "^8.54.2",
     "qrcode-generator": "^2.0.4"
